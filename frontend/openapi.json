@@ -382,6 +382,12 @@
             "description": "How to fix a missing SDK or key.",
             "title": "Message"
           },
+          "mock": {
+            "default": false,
+            "description": "Replays go to the offline mock API (`stepback ui --mock`): nothing is sent.",
+            "title": "Mock",
+            "type": "boolean"
+          },
           "sdk_installed": {
             "title": "Sdk Installed",
             "type": "boolean"

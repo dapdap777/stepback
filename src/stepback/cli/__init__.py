@@ -226,6 +226,11 @@ def prices_command(obj: Ctx, model: str | None) -> None:
 )
 @click.option("--open/--no-open", "open_browser", default=True, help="Open a browser tab.")
 @click.option(
+    "--mock",
+    is_flag=True,
+    help="Send replays to the bundled offline mock API (no key, nothing sent or billed).",
+)
+@click.option(
     "--allow-origin",
     "allow_origins",
     multiple=True,
@@ -235,7 +240,12 @@ def prices_command(obj: Ctx, model: str | None) -> None:
 )
 @pass_ctx
 def ui_command(
-    obj: Ctx, host: str, port: int | None, open_browser: bool, allow_origins: tuple[str, ...]
+    obj: Ctx,
+    host: str,
+    port: int | None,
+    open_browser: bool,
+    mock: bool,
+    allow_origins: tuple[str, ...],
 ) -> None:
     """Start the local web UI (http://127.0.0.1:7777)."""
     import threading
@@ -267,7 +277,9 @@ def ui_command(
     url = f"http://{url_host}:{chosen}"
 
     try:
-        app = create_app(obj.db_path, allowed_hosts=allowed_hosts, allowed_origins=origins)
+        app = create_app(
+            obj.db_path, allowed_hosts=allowed_hosts, allowed_origins=origins, replay_mock=mock
+        )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
     console.print(
@@ -275,6 +287,7 @@ def ui_command(
             ("Stepback UI ", "bold"),
             (url, "bold cyan underline"),
             (f"  ·  {obj.db_path}", "dim"),
+            ("\nReplays use the offline mock API (--mock).", "yellow") if mock else "",
             ("\nPress Ctrl+C to stop.", "dim"),
         )
     )
@@ -308,6 +321,43 @@ def _pick_port(host: str, requested: int | None) -> int:
         if free(port):
             return port
     raise click.ClickException("no free port between 7777 and 7796; pass --port")
+
+
+@cli.command("demo")
+@pass_ctx
+def demo_command(obj: Ctx) -> None:
+    """Record the example agent offline (mock API: no key, no cost), then try `stepback ui`."""
+    import runpy
+
+    from .. import config
+    from ..demo import example_path
+
+    path = example_path()
+    config.configure(db_path=obj.db_path)
+    obj.console.print(
+        Text.assemble(
+            ("Running the example agent against the offline mock API", "bold"),
+            (f"  ({path.name}; no API key, nothing billed)\n", "dim"),
+        )
+    )
+    argv = sys.argv
+    sys.argv = [str(path), "--mock"]
+    try:
+        runpy.run_path(str(path), run_name="__main__")
+    except SystemExit as exc:
+        if exc.code not in (0, None):
+            raise
+    finally:
+        sys.argv = argv
+    obj.console.print(
+        Text.assemble(
+            ("\nNext: ", "bold"),
+            ("stepback ui", "bold cyan"),
+            (" to open the timeline, or ", "dim"),
+            ("stepback show", "bold cyan"),
+            (" for the terminal view.", "dim"),
+        )
+    )
 
 
 @cli.command("openapi")

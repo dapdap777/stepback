@@ -156,6 +156,9 @@ forked run** linked to the original step.
   error message.
 - You can change the model, which helps when the recorded one has been retired. Replays are
   sent without streaming, and `stream` is ignored.
+- **Try it offline:** `stepback ui --mock` sends replays to the bundled mock API instead of
+  Anthropic. No key is needed, and nothing is sent or billed. The mock is scripted for the
+  example agent (`stepback demo`), so its answers are canned.
 
 Compare a fork with its parent from the fork's page (**Compare with parent**, or `d`).
 

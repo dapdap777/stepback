@@ -96,3 +96,21 @@ def test_supported_range_is_declared_consistently() -> None:
 
     ci = (root / ".github" / "workflows" / "ci.yml").read_text()
     assert f'ANTHROPIC_OLDEST: "{floor_major}.{floor_minor}.0"' in ci
+
+
+def test_version_is_consistent() -> None:
+    import sys
+    from pathlib import Path
+
+    import stepback
+
+    if sys.version_info >= (3, 11):
+        import tomllib
+    else:  # pragma: no cover
+        import tomli as tomllib
+
+    root = Path(__file__).resolve().parent.parent
+    project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    assert project["name"] == "stepback-debugger"
+    assert project["version"] == stepback.__version__
+    assert f"## [{stepback.__version__}]" in (root / "CHANGELOG.md").read_text()

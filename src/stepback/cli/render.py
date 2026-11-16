@@ -154,11 +154,11 @@ def runs_table(summaries: list[RunSummary], now: float | None = None, width: int
     name_width = 30
     table = _runs_table(summaries, now, optional, name_width)
     measure = Console(width=10_000)
-    for _ in range(3):
+    while name_width > 10:
         overflow = measure.measure(table).maximum - width
-        if overflow <= 0 or name_width <= 10:
+        if overflow <= 0:
             break
-        name_width = max(10, name_width - overflow)
+        name_width = max(10, name_width - max(1, overflow))
         table = _runs_table(summaries, now, optional, name_width)
     return table
 

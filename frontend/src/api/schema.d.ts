@@ -334,6 +334,12 @@ export interface components {
              * @description How to fix a missing SDK or key.
              */
             message: string | null;
+            /**
+             * Mock
+             * @description Replays go to the offline mock API (`stepback ui --mock`): nothing is sent.
+             * @default false
+             */
+            mock: boolean;
             /** Sdk Installed */
             sdk_installed: boolean;
             /** Sdk Version */

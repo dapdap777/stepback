@@ -224,7 +224,7 @@ export function ReplayEditor({ step, onClose, onDone }: { step: StepDetail; onCl
             </div>
           ) : null}
           {estimate ? (
-            <ConfirmPanel estimate={estimate} sending={busy === "send"} disabled={credentialsMissing} onBack={() => setEstimate(null)} onSend={send} />
+            <ConfirmPanel estimate={estimate} sending={busy === "send"} disabled={credentialsMissing} mock={status?.mock ?? false} onBack={() => setEstimate(null)} onSend={send} />
           ) : (
             <div className="flex items-center gap-2">
               <span className="text-[12px] text-faint">Review shows the model, input tokens and estimated cost before anything is sent.</span>
@@ -243,6 +243,14 @@ export function ReplayEditor({ step, onClose, onDone }: { step: StepDetail; onCl
 
 function CredentialNotice({ status }: { status: ReplayStatus | null }) {
   if (!status) return null;
+  if (status.mock) {
+    return (
+      <div className="flex items-center gap-2 text-[12px] text-muted" data-testid="replay-credentials">
+        <KeyRound className="size-3.5 text-tool" />
+        Offline mode (<code className="font-mono">stepback ui --mock</code>): replays go to the bundled mock API. Nothing is sent or billed.
+      </div>
+    );
+  }
   if (status.sdk_installed && status.credentials_configured) {
     return (
       <div className="flex items-center gap-2 text-[12px] text-muted" data-testid="replay-credentials">
@@ -259,7 +267,7 @@ function CredentialNotice({ status }: { status: ReplayStatus | null }) {
   );
 }
 
-function ConfirmPanel({ estimate, sending, disabled, onBack, onSend }: { estimate: ReplayEstimate; sending: boolean; disabled: boolean; onBack: () => void; onSend: () => void }) {
+function ConfirmPanel({ estimate, sending, disabled, mock, onBack, onSend }: { estimate: ReplayEstimate; sending: boolean; disabled: boolean; mock: boolean; onBack: () => void; onSend: () => void }) {
   const approx = estimate.exact ? "" : "≈ ";
   return (
     <div data-testid="replay-confirm">
@@ -268,19 +276,25 @@ function ConfirmPanel({ estimate, sending, disabled, onBack, onSend }: { estimat
         <Metric
           label="Input tokens"
           value={`${approx}${fmtTokens(estimate.input_tokens)}`}
-          sub={estimate.exact ? "counted by the API" : estimate.note ?? "estimated locally"}
+          sub={estimate.exact ? (mock ? "counted by the offline mock" : "counted by the API") : estimate.note ?? "estimated locally"}
           testId="replay-input-tokens"
         />
         <Metric
           label="Estimated cost"
           value={estimate.price_known ? `${approx}${fmtCost(estimate.input_cost_usd)} – ${fmtCost(estimate.max_total_cost_usd)}` : "unknown model price"}
-          sub={estimate.price_known ? `input, up to ${fmtTokens(estimate.max_tokens)} output tokens` : "add it to prices.toml"}
+          sub={
+            estimate.price_known
+              ? `${mock ? "if sent for real: " : ""}input, up to ${fmtTokens(estimate.max_tokens)} output tokens`
+              : "add it to prices.toml"
+          }
           testId="replay-cost"
         />
         <Metric label="Original call" value={fmtCost(estimate.original_cost_usd)} sub={estimate.original_input_tokens ? `${fmtTokens(estimate.original_input_tokens)} input tokens` : undefined} />
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[12px] text-muted">Sends 1 request to the Anthropic API, billed to your account.</span>
+        <span className="text-[12px] text-muted">
+          {mock ? "Sends 1 request to the offline mock API. Nothing is billed." : "Sends 1 request to the Anthropic API, billed to your account."}
+        </span>
         <Button className="ml-auto" onClick={onBack} disabled={sending}>
           <ArrowLeft className="size-3.5" /> Back to edit
         </Button>

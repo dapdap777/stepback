@@ -4,16 +4,16 @@
 check: lint test test-oldest
 
 lint:
-	uv run ruff check src tests
-	uv run ruff format --check src tests
+	uv run ruff check src tests examples
+	uv run ruff format --check src tests examples
 	uv run mypy
 
 test:
 	uv run pytest -q
 
 fmt:
-	uv run ruff check --fix src tests
-	uv run ruff format src tests
+	uv run ruff check --fix src tests examples
+	uv run ruff format src tests examples
 
 # Same as CI's "anthropic oldest" jobs: a separate env pinned to the oldest supported SDK.
 OLDEST_ENV ?= .venv-oldest

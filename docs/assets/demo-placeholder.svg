@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-label="Demo GIF placeholder">
+  <rect width="960" height="300" rx="16" fill="#10131a"/>
+  <rect x="1" y="1" width="958" height="298" rx="15" fill="none" stroke="#303848" stroke-width="2" stroke-dasharray="8 8"/>
+  <g transform="translate(436 54)">
+    <rect width="88" height="88" rx="22" fill="#7c5cff"/>
+    <path d="M52 25 L31 44 L52 63" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="63" cy="44" r="5.5" fill="#fff"/>
+  </g>
+  <text x="480" y="190" text-anchor="middle" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="26" font-weight="600" fill="#e7eaf0">Demo GIF placeholder</text>
+  <text x="480" y="228" text-anchor="middle" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="18" fill="#8d96a8">record an agent run  →  inspect every step  →  edit and replay one step</text>
+</svg>

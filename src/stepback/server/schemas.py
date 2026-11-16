@@ -229,6 +229,10 @@ class ReplayStatus(BaseModel):
     )
     message: str | None = Field(description="How to fix a missing SDK or key.")
     known_models: list[str]
+    mock: bool = Field(
+        default=False,
+        description="Replays go to the offline mock API (`stepback ui --mock`): nothing is sent.",
+    )
 
 
 class ReplayBody(BaseModel):

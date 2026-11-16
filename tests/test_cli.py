@@ -75,7 +75,12 @@ def test_ls_lists_runs(runner: CliRunner, db_path: Path, agent_run: str) -> None
 def test_ls_narrow_terminal_keeps_cost_column(
     runner: CliRunner, db_path: Path, agent_run: str
 ) -> None:
+    with TraceStore(db_path) as store:
+        store.create_run(
+            Run(id="run_narrow000001", name="weather-agent (mock)", created_at=time.time())
+        )
     result = invoke(runner, db_path, "ls", width=80)
+    assert "…" not in "".join(line for line in result.output.splitlines() if "Steps" in line)
     lines = result.output.splitlines()
     header = next(line for line in lines if line.strip().startswith("Run"))
     assert "Cost" in header

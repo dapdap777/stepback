@@ -1,5 +1,7 @@
 [project]
-name = "stepback"
+# Published as "stepback-debugger" ("stepback" is taken on PyPI by an unrelated project);
+# the import name and the CLI command are `stepback`.
+name = "stepback-debugger"
 version = "0.1.0"
 description = "Time-travel debugger for AI agents: record every LLM call, inspect it in a local web UI, and replay from any step."
 readme = "README.md"
@@ -40,6 +42,8 @@ stepback = "stepback.cli:main"
 [project.urls]
 Homepage = "https://github.com/dapdap777/stepback"
 Issues = "https://github.com/dapdap777/stepback/issues"
+Changelog = "https://github.com/dapdap777/stepback/blob/main/CHANGELOG.md"
+Security = "https://github.com/dapdap777/stepback/blob/main/SECURITY.md"
 
 [dependency-groups]
 dev = [
@@ -60,8 +64,12 @@ packages = ["src/stepback"]
 # The built frontend is gitignored but must ship in the wheel.
 artifacts = ["src/stepback/server/static/**"]
 
+[tool.hatch.build.targets.wheel.force-include]
+# `stepback demo` runs the example agent; ship it inside the package.
+"examples/weather_agent.py" = "stepback/demo/weather_agent.py"
+
 [tool.hatch.build.targets.sdist]
-include = ["src/stepback", "tests", "README.md", "LICENSE"]
+include = ["src/stepback", "tests", "examples", "README.md", "LICENSE", "CHANGELOG.md"]
 artifacts = ["src/stepback/server/static/**"]
 
 [tool.pytest.ini_options]

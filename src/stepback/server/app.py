@@ -56,12 +56,18 @@ def create_app(
     allowed_origins: Iterable[str] = (),
     static_dir: Path | None = None,
     replay_client_factory: replay.ClientFactory | None = None,
+    replay_mock: bool = False,
 ) -> FastAPI:
     """Build the app. ``allowed_hosts``/``allowed_origins`` feed :class:`LocalOnlyMiddleware`.
 
     ``replay_client_factory`` builds the Anthropic client for replays; by default a fresh
     client reads credentials from the environment at replay time (tests inject a fake).
+    ``replay_mock`` sends replays to the bundled offline mock API instead (``ui --mock``).
     """
+    if replay_mock and replay_client_factory is None:
+        from ..demo.mock_api import mock_client
+
+        replay_client_factory = mock_client
     allowed_hosts, allowed_origins = validate_allowlists(allowed_hosts, allowed_origins)
     store = TraceStore(db_path)
     static = static_dir or STATIC_DIR
@@ -228,6 +234,16 @@ def create_app(
     @app.get("/api/replay/status", tags=["replay"])
     def get_replay_status() -> ReplayStatus:
         """Whether replay can authenticate. Reports the credential's source, never its value."""
+        if replay_mock:
+            return ReplayStatus(
+                sdk_installed=True,
+                sdk_version=None,
+                credentials_configured=True,
+                credential_source="offline mock API",
+                message=None,
+                known_models=replay.known_models(),
+                mock=True,
+            )
         status = replay.credential_status()
         return ReplayStatus(
             sdk_installed=status.sdk_installed,
