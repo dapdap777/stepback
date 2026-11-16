@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Oldest supported anthropic SDK. Keep in sync with pyproject.toml ([project.optional-dependencies])
+# and SUPPORTED_ANTHROPIC in src/stepline/recorder/anthropic_adapter.py
+# (tests/test_sdk_contract.py checks that all three agree).
+env:
+  ANTHROPIC_OLDEST: "0.40.0"
+
+jobs:
+  lint:
+    name: lint + types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check src tests examples
+      - run: uv run ruff format --check src tests examples
+      - run: uv run mypy
+
+  test:
+    name: test (py${{ matrix.python }}, anthropic ${{ matrix.anthropic }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+        anthropic: ["newest"]
+        include:
+          # Async detection and stream hooks depend on SDK internals, so test both
+          # ends of the supported range.
+          - python: "3.10"
+            anthropic: "oldest"
+          - python: "3.13"
+            anthropic: "oldest"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Install anthropic SDK (${{ matrix.anthropic }})
+        run: |
+          if [ "${{ matrix.anthropic }}" = "oldest" ]; then
+            spec="anthropic==${ANTHROPIC_OLDEST}"
+          else
+            spec="anthropic>=${ANTHROPIC_OLDEST},<3"  # newest release in the supported range
+          fi
+          uv pip install --upgrade "$spec"
+          uv run --no-sync python -c "import anthropic; print('anthropic', anthropic.__version__)"
+      - run: uv run --no-sync pytest -q
+
+  frontend:
+    name: frontend build + e2e
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: uv sync --locked
+        working-directory: .
+      - run: npm ci
+      - name: API types are up to date with the backend
+        run: |
+          npm run gen:api
+          git diff --exit-code -- openapi.json src/api/schema.d.ts \
+            || { echo "::error::Run 'npm run gen:api' and commit the result"; exit 1; }
+      - name: Typecheck + build (fails CI if the build breaks)
+        run: npm run build
+      - name: Wheel contains the built UI and serves it
+        working-directory: .
+        run: |
+          uv build --wheel
+          python - <<'PY'
+          import glob, zipfile
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          assert "stepline/server/static/index.html" in names, "UI missing from wheel"
+          assert "stepline/demo/weather_agent.py" in names, "demo agent missing from wheel"
+          assert any(n.startswith("stepline/server/static/assets/") and n.endswith(".js") for n in names)
+          print(sum("/static/" in n for n in names), "static files in wheel")
+          PY
+          uv venv /tmp/wheel-env
+          uv pip install --python /tmp/wheel-env/bin/python dist/*.whl "anthropic>=0.40,<3" httpx
+          cd /tmp && /tmp/wheel-env/bin/python - <<'PY'
+          from fastapi.testclient import TestClient
+          from stepline.server import create_app
+          client = TestClient(create_app("/tmp/wheel-check.db"), base_url="http://127.0.0.1:7777")
+          page = client.get("/")
+          assert page.status_code == 200 and "/assets/" in page.text, page.text[:200]
+          print("installed wheel serves the bundled UI")
+          PY
+          cd /tmp && STEPLINE_DEMO_FAST=1 /tmp/wheel-env/bin/stepline --db /tmp/wheel-demo.db demo
+          /tmp/wheel-env/bin/stepline --db /tmp/wheel-demo.db ls
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Playwright e2e (smoke, virtualization, XSS)
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7

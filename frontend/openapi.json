@@ -1,0 +1,2022 @@
+{
+  "components": {
+    "schemas": {
+      "DiffPair": {
+        "properties": {
+          "a": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "b": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "position": {
+            "description": "Row number in the alignment (not a step index).",
+            "title": "Position",
+            "type": "integer"
+          },
+          "request_changed": {
+            "title": "Request Changed",
+            "type": "boolean"
+          },
+          "response_changed": {
+            "title": "Response Changed",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "shared: the same recorded step (inherited by a fork); same: identical request and response; changed: request or response differs; added/removed: only in run b / run a.",
+            "enum": [
+              "shared",
+              "same",
+              "changed",
+              "added",
+              "removed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "position",
+          "status",
+          "request_changed",
+          "response_changed",
+          "a",
+          "b"
+        ],
+        "title": "DiffPair",
+        "type": "object"
+      },
+      "DiffTotals": {
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "steps": {
+            "title": "Steps",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "steps",
+          "input_tokens",
+          "output_tokens",
+          "cost_usd",
+          "latency_ms"
+        ],
+        "title": "DiffTotals",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "db_path": {
+            "title": "Db Path",
+            "type": "string"
+          },
+          "run_count": {
+            "title": "Run Count",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "db_path",
+          "run_count"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "ReplayBody": {
+        "properties": {
+          "confirm": {
+            "default": false,
+            "description": "Must be true to send. Replays are paid API calls made only on an explicit user action.",
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "request": {
+            "additionalProperties": true,
+            "description": "Complete kwargs for messages.create: model, max_tokens, messages, system, tools and any other parameters.",
+            "title": "Request",
+            "type": "object"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "ReplayBody",
+        "type": "object"
+      },
+      "ReplayEstimate": {
+        "properties": {
+          "changed": {
+            "description": "Top-level request keys that differ from the original.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "exact": {
+            "description": "True when counted by the API's free count_tokens endpoint.",
+            "title": "Exact",
+            "type": "boolean"
+          },
+          "input_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Cost Usd"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "max_output_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "If the response uses all max_tokens.",
+            "title": "Max Output Cost Usd"
+          },
+          "max_tokens": {
+            "title": "Max Tokens",
+            "type": "integer"
+          },
+          "max_total_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Total Cost Usd"
+          },
+          "method": {
+            "enum": [
+              "count_tokens",
+              "scaled_from_recording",
+              "heuristic"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "original_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Cost Usd"
+          },
+          "original_input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Input Tokens"
+          },
+          "price_known": {
+            "title": "Price Known",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "model",
+          "input_tokens",
+          "exact",
+          "method",
+          "note",
+          "max_tokens",
+          "price_known",
+          "input_cost_usd",
+          "max_output_cost_usd",
+          "max_total_cost_usd",
+          "original_cost_usd",
+          "original_input_tokens",
+          "changed"
+        ],
+        "title": "ReplayEstimate",
+        "type": "object"
+      },
+      "ReplayOut": {
+        "properties": {
+          "changed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The API's own error message, if it failed.",
+            "title": "Error Message"
+          },
+          "run_id": {
+            "description": "The new forked run.",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "step_id",
+          "status",
+          "error",
+          "error_message",
+          "changed"
+        ],
+        "title": "ReplayOut",
+        "type": "object"
+      },
+      "ReplayStatus": {
+        "properties": {
+          "credential_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where credentials come from (e.g. ANTHROPIC_API_KEY). Never the value.",
+            "title": "Credential Source"
+          },
+          "credentials_configured": {
+            "title": "Credentials Configured",
+            "type": "boolean"
+          },
+          "known_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Known Models",
+            "type": "array"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How to fix a missing SDK or key.",
+            "title": "Message"
+          },
+          "mock": {
+            "default": false,
+            "description": "Replays go to the offline mock API (`stepline ui --mock`): nothing is sent.",
+            "title": "Mock",
+            "type": "boolean"
+          },
+          "sdk_installed": {
+            "title": "Sdk Installed",
+            "type": "boolean"
+          },
+          "sdk_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdk Version"
+          }
+        },
+        "required": [
+          "sdk_installed",
+          "sdk_version",
+          "credentials_configured",
+          "credential_source",
+          "message",
+          "known_models"
+        ],
+        "title": "ReplayStatus",
+        "type": "object"
+      },
+      "RunDetail": {
+        "properties": {
+          "forked_from_step": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The step that was replayed."
+          },
+          "forks": {
+            "items": {
+              "$ref": "#/components/schemas/RunOut"
+            },
+            "title": "Forks",
+            "type": "array"
+          },
+          "inherited_steps": {
+            "description": "Steps inherited from ancestor runs.",
+            "title": "Inherited Steps",
+            "type": "integer"
+          },
+          "own_steps": {
+            "title": "Own Steps",
+            "type": "integer"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The run this one was forked from."
+          },
+          "run": {
+            "$ref": "#/components/schemas/RunOut"
+          }
+        },
+        "required": [
+          "run",
+          "parent",
+          "forked_from_step",
+          "forks",
+          "inherited_steps",
+          "own_steps"
+        ],
+        "title": "RunDetail",
+        "type": "object"
+      },
+      "RunDiff": {
+        "properties": {
+          "a": {
+            "$ref": "#/components/schemas/RunOut"
+          },
+          "b": {
+            "$ref": "#/components/schemas/RunOut"
+          },
+          "first_divergence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position (row) of the first pair that isn't shared/same; None if identical.",
+            "title": "First Divergence"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/DiffPair"
+            },
+            "title": "Pairs",
+            "type": "array"
+          },
+          "total_pairs": {
+            "title": "Total Pairs",
+            "type": "integer"
+          },
+          "totals_a": {
+            "$ref": "#/components/schemas/DiffTotals"
+          },
+          "totals_b": {
+            "$ref": "#/components/schemas/DiffTotals"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "totals_a",
+          "totals_b",
+          "pairs",
+          "total_pairs",
+          "offset",
+          "limit",
+          "first_divergence"
+        ],
+        "title": "RunDiff",
+        "type": "object"
+      },
+      "RunOut": {
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "number"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error_count": {
+            "title": "Error Count",
+            "type": "integer"
+          },
+          "fork_count": {
+            "title": "Fork Count",
+            "type": "integer"
+          },
+          "forked_from_step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forked From Step Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "created_at",
+          "ended_at",
+          "parent_run_id",
+          "forked_from_step_id",
+          "metadata",
+          "step_count",
+          "error_count",
+          "input_tokens",
+          "output_tokens",
+          "cost_usd",
+          "latency_ms",
+          "models",
+          "fork_count"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "RunPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pass as `cursor` for the next page.",
+            "title": "Next Cursor"
+          },
+          "total": {
+            "description": "Runs matching the filters, across all pages.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "next_cursor"
+        ],
+        "title": "RunPage",
+        "type": "object"
+      },
+      "RunRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "RunRef",
+        "type": "object"
+      },
+      "StepDetail": {
+        "description": "A step with full request/response bodies.",
+        "properties": {
+          "cache_read_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Read Tokens"
+          },
+          "cache_write_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Write Tokens"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "idx": {
+            "title": "Idx",
+            "type": "integer"
+          },
+          "incomplete": {
+            "title": "Incomplete",
+            "type": "boolean"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens"
+          },
+          "is_replay": {
+            "title": "Is Replay",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "message_count": {
+            "title": "Message Count",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "operation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens"
+          },
+          "parent_message_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Messages in the parent step's request: messages after `parent_message_count + 1` are new in this step.",
+            "title": "Parent Message Count"
+          },
+          "parent_step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Step Id"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "replay_overrides": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replay Overrides"
+          },
+          "request": {
+            "additionalProperties": true,
+            "description": "The exact kwargs sent to the SDK (minus headers/transport options).",
+            "title": "Request",
+            "type": "object"
+          },
+          "request_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Hash"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          },
+          "response_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Hash"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "number"
+          },
+          "stop_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Reason"
+          },
+          "streamed": {
+            "title": "Streamed",
+            "type": "boolean"
+          },
+          "tool_calls": {
+            "items": {
+              "$ref": "#/components/schemas/ToolCall"
+            },
+            "title": "Tool Calls",
+            "type": "array"
+          },
+          "tool_results": {
+            "description": "Results returned for this step's tool calls (from the following request).",
+            "items": {
+              "$ref": "#/components/schemas/ToolResult"
+            },
+            "title": "Tool Results",
+            "type": "array"
+          },
+          "ttft_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttft Ms"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "idx",
+          "parent_step_id",
+          "provider",
+          "kind",
+          "operation",
+          "model",
+          "request",
+          "response",
+          "tool_calls",
+          "tool_results",
+          "stop_reason",
+          "input_tokens",
+          "output_tokens",
+          "cache_read_tokens",
+          "cache_write_tokens",
+          "cost_usd",
+          "latency_ms",
+          "ttft_ms",
+          "streamed",
+          "incomplete",
+          "error",
+          "started_at",
+          "is_replay",
+          "replay_overrides",
+          "request_hash",
+          "response_hash",
+          "message_count",
+          "parent_message_count"
+        ],
+        "title": "StepDetail",
+        "type": "object"
+      },
+      "StepPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StepSummaryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "StepPage",
+        "type": "object"
+      },
+      "StepRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "idx": {
+            "title": "Idx",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "idx"
+        ],
+        "title": "StepRef",
+        "type": "object"
+      },
+      "StepSummaryOut": {
+        "properties": {
+          "cache_read_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Read Tokens"
+          },
+          "cache_write_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Write Tokens"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "error_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Status"
+          },
+          "error_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Type"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "idx": {
+            "title": "Idx",
+            "type": "integer"
+          },
+          "incomplete": {
+            "title": "Incomplete",
+            "type": "boolean"
+          },
+          "inherited": {
+            "title": "Inherited",
+            "type": "boolean"
+          },
+          "input_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Preview"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens"
+          },
+          "is_replay": {
+            "title": "Is Replay",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "message_count": {
+            "title": "Message Count",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "operation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation"
+          },
+          "output_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Preview"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens"
+          },
+          "parent_step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Step Id"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "request_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Hash"
+          },
+          "response_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Hash"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "number"
+          },
+          "stop_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Reason"
+          },
+          "streamed": {
+            "title": "Streamed",
+            "type": "boolean"
+          },
+          "tool_calls": {
+            "items": {
+              "$ref": "#/components/schemas/ToolCallSummary"
+            },
+            "title": "Tool Calls",
+            "type": "array"
+          },
+          "ttft_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttft Ms"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "idx",
+          "parent_step_id",
+          "provider",
+          "kind",
+          "operation",
+          "model",
+          "stop_reason",
+          "input_tokens",
+          "output_tokens",
+          "cache_read_tokens",
+          "cache_write_tokens",
+          "cost_usd",
+          "latency_ms",
+          "ttft_ms",
+          "streamed",
+          "incomplete",
+          "is_replay",
+          "started_at",
+          "error_type",
+          "error_status",
+          "input_preview",
+          "output_preview",
+          "request_hash",
+          "response_hash",
+          "message_count",
+          "tool_calls",
+          "inherited"
+        ],
+        "title": "StepSummaryOut",
+        "type": "object"
+      },
+      "ToolCall": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "ToolCall",
+        "type": "object"
+      },
+      "ToolCallSummary": {
+        "properties": {
+          "has_result": {
+            "title": "Has Result",
+            "type": "boolean"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "input_preview": {
+            "title": "Input Preview",
+            "type": "string"
+          },
+          "is_error": {
+            "title": "Is Error",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "input_preview",
+          "has_result",
+          "is_error"
+        ],
+        "title": "ToolCallSummary",
+        "type": "object"
+      },
+      "ToolResult": {
+        "properties": {
+          "content": {
+            "title": "Content"
+          },
+          "is_error": {
+            "default": false,
+            "title": "Is Error",
+            "type": "boolean"
+          },
+          "tool_use_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Use Id"
+          }
+        },
+        "title": "ToolResult",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "summary": "Local API for the Stepline time-travel debugger.",
+    "title": "Stepline",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/diff": {
+      "get": {
+        "description": "Align two runs' histories step by step and flag differences.\n\nSteps are matched by request content (so a fork's inherited steps and identical\nre-runs line up even when one side has extra steps, e.g. a failed attempt); the\nunmatched stretches in between are paired in order.",
+        "operationId": "diffRuns",
+        "parameters": [
+          {
+            "description": "Run id (left side)",
+            "in": "query",
+            "name": "a",
+            "required": true,
+            "schema": {
+              "description": "Run id (left side)",
+              "title": "A",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Run id (right side)",
+            "in": "query",
+            "name": "b",
+            "required": true,
+            "schema": {
+              "description": "Run id (right side)",
+              "title": "B",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDiff"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Diff Runs",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Health",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/api/replay/status": {
+      "get": {
+        "description": "Whether replay can authenticate. Reports the credential's source, never its value.",
+        "operationId": "getReplayStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Replay Status",
+        "tags": [
+          "replay"
+        ]
+      }
+    },
+    "/api/runs": {
+      "get": {
+        "operationId": "listRuns",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`next_cursor` of the last page",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`next_cursor` of the last page",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Name or id substring",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name or id substring",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(running|ok|error)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_forks",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Forks",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Runs",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/runs/{run_id}": {
+      "delete": {
+        "operationId": "deleteRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Also delete runs forked from this one.",
+            "in": "query",
+            "name": "cascade",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Also delete runs forked from this one.",
+              "title": "Cascade",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Run",
+        "tags": [
+          "runs"
+        ]
+      },
+      "get": {
+        "operationId": "getRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/runs/{run_id}/steps": {
+      "get": {
+        "description": "A page of the run's history, without message bodies (see `getStep` for those).\n\nFor forked runs the history begins with steps inherited from the parent run.",
+        "operationId": "listSteps",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Steps",
+        "tags": [
+          "steps"
+        ]
+      }
+    },
+    "/api/steps/{step_id}": {
+      "get": {
+        "operationId": "getStep",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Step",
+        "tags": [
+          "steps"
+        ]
+      }
+    },
+    "/api/steps/{step_id}/replay": {
+      "post": {
+        "description": "Send one (edited) LLM call and save the result as a new forked run. Costs money.\n\nAPI failures (auth, rate limit, invalid request...) are saved as a failed step in\nthe fork and returned with status \"error\". The source run is never modified.",
+        "operationId": "replayStep",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replay Step",
+        "tags": [
+          "replay"
+        ]
+      }
+    },
+    "/api/steps/{step_id}/replay/estimate": {
+      "post": {
+        "description": "Validate an edited request and estimate its input tokens and cost.\n\nFree: uses the token-counting endpoint (or a local estimate). Nothing is generated.",
+        "operationId": "estimateReplay",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayEstimate"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Estimate Replay",
+        "tags": [
+          "replay"
+        ]
+      }
+    }
+  }
+}

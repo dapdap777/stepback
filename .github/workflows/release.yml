@@ -1,0 +1,69 @@
+name: Release
+
+# Publishes to PyPI when a maintainer pushes a version tag (e.g. `git push origin v0.1.0`).
+# Uses PyPI trusted publishing (OIDC): there are no API tokens in this repository.
+# One-time setup on PyPI: add a trusted publisher for project "stepline" with
+# owner "dapdap777", repository "stepline", workflow "release.yml", environment "pypi".
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sdist + wheel (with the UI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Tag matches the package version
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match pyproject version ${version}"; exit 1
+          fi
+      - run: uv sync --locked
+      - run: uv run pytest -q
+      - name: Build the UI
+        working-directory: frontend
+        run: npm ci && npm run build
+      - run: uv build
+      - name: Check the wheel contains the UI and the demo
+        run: |
+          python3 - <<'PY'
+          import glob, zipfile
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          for required in ("stepline/server/static/index.html", "stepline/demo/weather_agent.py"):
+              assert required in names, f"{required} missing from wheel"
+          print("wheel OK:", len(names), "files")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/stepline/
+    permissions:
+      id-token: write  # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

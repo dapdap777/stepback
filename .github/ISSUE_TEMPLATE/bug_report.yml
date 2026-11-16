@@ -1,0 +1,41 @@
+name: Bug report
+description: Something doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Security issues:** please don't file them here; see SECURITY.md.
+        **Don't paste real prompts, outputs or keys** from your traces unless you're sure they're safe to share.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The smallest code or commands that show the problem (ideally with `stepline demo` or a mocked client).
+      render: python
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `stepline --version`, `python --version` and `pip show anthropic | head -2`.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Recorder, CLI, Web UI, Replay, Storage, Docs, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Stepline logs to the `stepline` logger; `logging.getLogger("stepline").setLevel("DEBUG")` shows more.
