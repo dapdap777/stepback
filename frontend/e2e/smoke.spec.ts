@@ -54,6 +54,7 @@ test("keyboard navigation on the run list", async ({ page, guard: _guard }) => {
   await page.keyboard.press("j");
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("run-title")).toHaveText("repo-triage-agent");
+  await expect(page.getByTestId("step-row")).toHaveCount(10); // steps loaded
   await page.keyboard.press("j");
   await expect(page.getByTestId("step-detail")).toContainText("Step #0");
   await page.keyboard.press("G");

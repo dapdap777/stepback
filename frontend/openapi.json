@@ -136,6 +136,279 @@
         "title": "Health",
         "type": "object"
       },
+      "ReplayBody": {
+        "properties": {
+          "confirm": {
+            "default": false,
+            "description": "Must be true to send. Replays are paid API calls made only on an explicit user action.",
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "request": {
+            "additionalProperties": true,
+            "description": "Complete kwargs for messages.create: model, max_tokens, messages, system, tools and any other parameters.",
+            "title": "Request",
+            "type": "object"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "ReplayBody",
+        "type": "object"
+      },
+      "ReplayEstimate": {
+        "properties": {
+          "changed": {
+            "description": "Top-level request keys that differ from the original.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "exact": {
+            "description": "True when counted by the API's free count_tokens endpoint.",
+            "title": "Exact",
+            "type": "boolean"
+          },
+          "input_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Cost Usd"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "max_output_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "If the response uses all max_tokens.",
+            "title": "Max Output Cost Usd"
+          },
+          "max_tokens": {
+            "title": "Max Tokens",
+            "type": "integer"
+          },
+          "max_total_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Total Cost Usd"
+          },
+          "method": {
+            "enum": [
+              "count_tokens",
+              "scaled_from_recording",
+              "heuristic"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "original_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Cost Usd"
+          },
+          "original_input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Input Tokens"
+          },
+          "price_known": {
+            "title": "Price Known",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "model",
+          "input_tokens",
+          "exact",
+          "method",
+          "note",
+          "max_tokens",
+          "price_known",
+          "input_cost_usd",
+          "max_output_cost_usd",
+          "max_total_cost_usd",
+          "original_cost_usd",
+          "original_input_tokens",
+          "changed"
+        ],
+        "title": "ReplayEstimate",
+        "type": "object"
+      },
+      "ReplayOut": {
+        "properties": {
+          "changed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The API's own error message, if it failed.",
+            "title": "Error Message"
+          },
+          "run_id": {
+            "description": "The new forked run.",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "step_id",
+          "status",
+          "error",
+          "error_message",
+          "changed"
+        ],
+        "title": "ReplayOut",
+        "type": "object"
+      },
+      "ReplayStatus": {
+        "properties": {
+          "credential_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where credentials come from (e.g. ANTHROPIC_API_KEY). Never the value.",
+            "title": "Credential Source"
+          },
+          "credentials_configured": {
+            "title": "Credentials Configured",
+            "type": "boolean"
+          },
+          "known_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Known Models",
+            "type": "array"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How to fix a missing SDK or key.",
+            "title": "Message"
+          },
+          "sdk_installed": {
+            "title": "Sdk Installed",
+            "type": "boolean"
+          },
+          "sdk_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdk Version"
+          }
+        },
+        "required": [
+          "sdk_installed",
+          "sdk_version",
+          "credentials_configured",
+          "credential_source",
+          "message",
+          "known_models"
+        ],
+        "title": "ReplayStatus",
+        "type": "object"
+      },
       "RunDetail": {
         "properties": {
           "forked_from_step": {
@@ -1307,6 +1580,28 @@
         ]
       }
     },
+    "/api/replay/status": {
+      "get": {
+        "description": "Whether replay can authenticate. Reports the credential's source, never its value.",
+        "operationId": "getReplayStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Replay Status",
+        "tags": [
+          "replay"
+        ]
+      }
+    },
     "/api/runs": {
       "get": {
         "operationId": "listRuns",
@@ -1608,6 +1903,112 @@
         "summary": "Get Step",
         "tags": [
           "steps"
+        ]
+      }
+    },
+    "/api/steps/{step_id}/replay": {
+      "post": {
+        "description": "Send one (edited) LLM call and save the result as a new forked run. Costs money.\n\nAPI failures (auth, rate limit, invalid request...) are saved as a failed step in\nthe fork and returned with status \"error\". The source run is never modified.",
+        "operationId": "replayStep",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replay Step",
+        "tags": [
+          "replay"
+        ]
+      }
+    },
+    "/api/steps/{step_id}/replay/estimate": {
+      "post": {
+        "description": "Validate an edited request and estimate its input tokens and cost.\n\nFree: uses the token-counting endpoint (or a local estimate). Nothing is generated.",
+        "operationId": "estimateReplay",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayEstimate"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Estimate Replay",
+        "tags": [
+          "replay"
         ]
       }
     }

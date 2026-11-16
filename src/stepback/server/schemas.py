@@ -217,3 +217,52 @@ class RunDiff(BaseModel):
     first_divergence: int | None = Field(
         description="Position (row) of the first pair that isn't shared/same; None if identical."
     )
+
+
+# ---------------------------------------------------------------------- replay
+class ReplayStatus(BaseModel):
+    sdk_installed: bool
+    sdk_version: str | None
+    credentials_configured: bool
+    credential_source: str | None = Field(
+        description="Where credentials come from (e.g. ANTHROPIC_API_KEY). Never the value."
+    )
+    message: str | None = Field(description="How to fix a missing SDK or key.")
+    known_models: list[str]
+
+
+class ReplayBody(BaseModel):
+    request: dict[str, Any] = Field(
+        description="Complete kwargs for messages.create: model, max_tokens, messages, "
+        "system, tools and any other parameters."
+    )
+    confirm: bool = Field(
+        default=False,
+        description="Must be true to send. Replays are paid API calls made only on an "
+        "explicit user action.",
+    )
+
+
+class ReplayEstimate(BaseModel):
+    model: str
+    input_tokens: int
+    exact: bool = Field(description="True when counted by the API's free count_tokens endpoint.")
+    method: Literal["count_tokens", "scaled_from_recording", "heuristic"]
+    note: str | None
+    max_tokens: int
+    price_known: bool
+    input_cost_usd: float | None
+    max_output_cost_usd: float | None = Field(description="If the response uses all max_tokens.")
+    max_total_cost_usd: float | None
+    original_cost_usd: float | None
+    original_input_tokens: int | None
+    changed: list[str] = Field(description="Top-level request keys that differ from the original.")
+
+
+class ReplayOut(BaseModel):
+    run_id: str = Field(description="The new forked run.")
+    step_id: str
+    status: Literal["ok", "error"]
+    error: dict[str, Any] | None
+    error_message: str | None = Field(description="The API's own error message, if it failed.")
+    changed: list[str]

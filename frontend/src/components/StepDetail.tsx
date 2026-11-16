@@ -1,7 +1,10 @@
 import { AlertOctagon, ArrowDown, ArrowUp, History, Radio, RotateCcw, Sparkles, X } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
-import type { StepDetail as StepDetailT, StepSummary } from "../api/client";
+import type { ReplayOut, StepDetail as StepDetailT, StepSummary } from "../api/client";
 import { useStep } from "../api/hooks";
+import { useKeys } from "../lib/keys";
+import { linkProps, paths } from "../lib/router";
+import { ReplayEditor } from "./ReplayEditor";
 import { fmtCost, fmtMs, fmtTokens, pretty } from "../lib/format";
 import { PlainText } from "./Collapsible";
 import { BlockView, MessageCard, asBlocks } from "./MessageView";
@@ -10,9 +13,29 @@ import { Badge, Button, ErrorBanner, Kbd, Spinner, cx } from "./ui";
 type Tab = "overview" | "conversation" | "request" | "json";
 type Message = { role: string; content: unknown };
 
-export function StepDetailPanel({ summary, position, total, onPrev, onNext, onClose }: { summary: StepSummary; position: number; total: number; onPrev: () => void; onNext: () => void; onClose: () => void }) {
+export function StepDetailPanel({
+  summary,
+  position,
+  total,
+  onPrev,
+  onNext,
+  onClose,
+  onReplayed,
+  parentRunId,
+}: {
+  summary: StepSummary;
+  position: number;
+  total: number;
+  onPrev: () => void;
+  onNext: () => void;
+  onClose: () => void;
+  onReplayed: (result: ReplayOut) => void;
+  parentRunId: string | null;
+}) {
   const { data, error, loading } = useStep(summary.id);
   const [tab, setTab] = useState<Tab>("overview");
+  const [replaying, setReplaying] = useState(false);
+  useKeys({ r: () => data && setReplaying(true) }, !replaying);
 
   return (
     <aside data-testid="step-detail" className="flex h-full min-w-0 flex-col border-l border-line bg-surface">
@@ -22,6 +45,15 @@ export function StepDetailPanel({ summary, position, total, onPrev, onNext, onCl
           <h2 className="text-[15px] font-semibold">Step #{summary.idx}</h2>
           <span className="truncate font-mono text-[12px] text-muted">{summary.model ?? summary.provider}</span>
           <div className="ml-auto flex items-center gap-1">
+            <Button
+              data-testid="replay-button"
+              className="mr-1 border-replay/40 text-replay hover:bg-replay-soft"
+              onClick={() => setReplaying(true)}
+              disabled={!data || data.id !== summary.id}
+              title="Edit this call and re-send it as a new fork (r)"
+            >
+              <RotateCcw className="size-3.5" /> Replay
+            </Button>
             <Button variant="ghost" onClick={onPrev} disabled={position <= 0} title="Previous step (k)" aria-label="Previous step">
               <ArrowUp className="size-3.5" />
             </Button>
@@ -86,8 +118,19 @@ export function StepDetailPanel({ summary, position, total, onPrev, onNext, onCl
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {error ? <ErrorBanner error={error} /> : null}
         {loading && !data ? <Spinner label="Loading step…" /> : null}
+        {data && data.id === summary.id && data.is_replay ? <ReplayBanner step={data} parentRunId={parentRunId} /> : null}
         {data && data.id === summary.id ? <TabBody tab={tab} step={data} /> : null}
       </div>
+      {replaying && data && data.id === summary.id ? (
+        <ReplayEditor
+          step={data}
+          onClose={() => setReplaying(false)}
+          onDone={(result) => {
+            setReplaying(false);
+            onReplayed(result);
+          }}
+        />
+      ) : null}
       <footer className="flex shrink-0 items-center gap-3 border-t border-line px-4 py-1.5 text-[11px] text-faint">
         <span>
           <Kbd>j</Kbd> <Kbd>k</Kbd> navigate
@@ -98,6 +141,26 @@ export function StepDetailPanel({ summary, position, total, onPrev, onNext, onCl
         <span className="ml-auto font-mono">{summary.id}</span>
       </footer>
     </aside>
+  );
+}
+
+function ReplayBanner({ step, parentRunId }: { step: StepDetailT; parentRunId: string | null }) {
+  const overrides = (step.replay_overrides ?? {}) as { changed?: string[] };
+  const changed = overrides.changed ?? [];
+  return (
+    <div data-testid="replay-banner" className="mb-4 rounded-lg border border-replay/30 bg-replay-soft px-3 py-2.5 text-[12.5px]">
+      <div className="flex items-center gap-2">
+        <RotateCcw className="size-3.5 text-replay" />
+        <span className="font-semibold text-replay">Replayed call</span>
+        <span className="text-muted">{changed.length ? `edited: ${changed.join(", ")}` : "re-sent unchanged"}</span>
+        {parentRunId ? (
+          <a {...linkProps(paths.diff(parentRunId, step.run_id))} className="ml-auto font-medium text-replay hover:underline">
+            Compare with parent →
+          </a>
+        ) : null}
+      </div>
+      <div className="mt-1 text-muted">The fork ends here: replay re-sends one LLM call and doesn't re-run your tool code.</div>
+    </div>
   );
 }
 

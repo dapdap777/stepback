@@ -294,7 +294,8 @@ function buildSections(a: StepDetail | null, b: StepDetail | null) {
   const rb = (b?.request ?? {}) as Record<string, unknown>;
   add("System prompt", sysText(ra.system), sysText(rb.system));
   const params = (r: Record<string, unknown>) => {
-    const { messages: _m, system: _s, tools: _t, ...rest } = r;
+    // `stream` is a transport detail (replays are never streamed), not a parameter edit.
+    const { messages: _m, system: _s, tools: _t, stream: _st, ...rest } = r;
     return pretty(rest);
   };
   add("Parameters", a ? params(ra) : "", b ? params(rb) : "");

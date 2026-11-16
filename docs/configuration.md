@@ -125,6 +125,40 @@ When working on the frontend with Vite's dev server, allow its exact origin:
 `stepback ui --allow-origin http://localhost:5173` (or `STEPBACK_ALLOW_ORIGINS`).
 Wildcards are rejected.
 
+## Replay
+
+Select a step in the UI and press **Replay** (or `r`). You can edit the model, system prompt,
+messages, tools and parameters, then re-send that single call. The result is saved as a **new
+forked run** linked to the original step.
+
+- **Nothing is sent until you confirm.** *Review cost* validates your edits and shows the
+  model, input tokens and estimated cost range (input cost, plus output up to `max_tokens`).
+  Counting tokens uses the API's free `count_tokens` endpoint, falling back to a local
+  estimate if that fails. The paid request goes out only when you click **Send replay**. It is
+  exactly one request: no automatic retries, no batch replay.
+- **Your key stays in your environment.** The key is read from the environment of the
+  `stepback ui` process at the moment you replay (`ANTHROPIC_API_KEY`, or
+  `ANTHROPIC_AUTH_TOKEN`, or an `ant auth login` profile with recent SDKs). It is never
+  stored, logged, or returned by the API. If no key is set, the UI tells you how to set one:
+
+  ```bash
+  export ANTHROPIC_API_KEY=sk-ant-...
+  stepback ui
+  ```
+
+- **History is immutable.** The original run is never modified. Each replay creates a new run
+  (`parent_run_id` = the original run, `forked_from_step_id` = the replayed step) that inherits
+  the steps before it.
+- **One call, not your agent.** Replay doesn't re-run your tool code, so the fork ends at the
+  replayed step, even if the new response asks for a tool.
+- **Failures are kept.** If the API rejects the replay (authentication, rate limit, invalid
+  request, retired model...), the fork is still saved, with a failed step showing the API's own
+  error message.
+- You can change the model, which helps when the recorded one has been retired. Replays are
+  sent without streaming, and `stream` is ignored.
+
+Compare a fork with its parent from the fork's page (**Compare with parent**, or `d`).
+
 ## Supported SDKs
 
 | SDK | Versions | Clients |

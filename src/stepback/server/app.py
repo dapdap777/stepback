@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Annotated, Any
@@ -13,13 +14,18 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.routing import APIRoute
 
-from .. import __version__
+from .. import __version__, replay
+from ..replay import InvalidReplayRequest, ReplayError, SdkMissing, StepNotFound
 from ..storage import RunHasForks, TraceStore
 from ..storage.models import StepSummary
 from .schemas import (
     DiffPair,
     DiffTotals,
     Health,
+    ReplayBody,
+    ReplayEstimate,
+    ReplayOut,
+    ReplayStatus,
     RunDetail,
     RunDiff,
     RunOut,
@@ -49,8 +55,13 @@ def create_app(
     allowed_hosts: Iterable[str] = LOOPBACK_HOSTS,
     allowed_origins: Iterable[str] = (),
     static_dir: Path | None = None,
+    replay_client_factory: replay.ClientFactory | None = None,
 ) -> FastAPI:
-    """Build the app. ``allowed_hosts``/``allowed_origins`` feed :class:`LocalOnlyMiddleware`."""
+    """Build the app. ``allowed_hosts``/``allowed_origins`` feed :class:`LocalOnlyMiddleware`.
+
+    ``replay_client_factory`` builds the Anthropic client for replays; by default a fresh
+    client reads credentials from the environment at replay time (tests inject a fake).
+    """
     allowed_hosts, allowed_origins = validate_allowlists(allowed_hosts, allowed_origins)
     store = TraceStore(db_path)
     static = static_dir or STATIC_DIR
@@ -204,6 +215,65 @@ def create_app(
             limit=limit,
             first_divergence=first,
         )
+
+    # ------------------------------------------------------------------ replay
+    def replay_error(exc: ReplayError) -> HTTPException:
+        if isinstance(exc, StepNotFound):
+            return HTTPException(404, str(exc))
+        if isinstance(exc, InvalidReplayRequest):
+            return HTTPException(422, {"code": exc.code, "message": str(exc), "errors": exc.errors})
+        status = 500 if isinstance(exc, SdkMissing) else 400
+        return HTTPException(status, {"code": exc.code, "message": str(exc)})
+
+    @app.get("/api/replay/status", tags=["replay"])
+    def get_replay_status() -> ReplayStatus:
+        """Whether replay can authenticate. Reports the credential's source, never its value."""
+        status = replay.credential_status()
+        return ReplayStatus(
+            sdk_installed=status.sdk_installed,
+            sdk_version=status.sdk_version,
+            credentials_configured=status.configured,
+            credential_source=status.source,
+            message=status.message,
+            known_models=replay.known_models(),
+        )
+
+    @app.post("/api/steps/{step_id}/replay/estimate", tags=["replay"])
+    def estimate_replay(step_id: str, body: ReplayBody) -> ReplayEstimate:
+        """Validate an edited request and estimate its input tokens and cost.
+
+        Free: uses the token-counting endpoint (or a local estimate). Nothing is generated.
+        """
+        try:
+            result = replay.estimate(
+                store, step_id, body.request, client_factory=replay_client_factory
+            )
+        except ReplayError as exc:
+            raise replay_error(exc) from None
+        return ReplayEstimate(**asdict(result))
+
+    @app.post("/api/steps/{step_id}/replay", status_code=201, tags=["replay"])
+    def replay_step(step_id: str, body: ReplayBody) -> ReplayOut:
+        """Send one (edited) LLM call and save the result as a new forked run. Costs money.
+
+        API failures (auth, rate limit, invalid request...) are saved as a failed step in
+        the fork and returned with status "error". The source run is never modified.
+        """
+        if not body.confirm:
+            raise HTTPException(
+                400,
+                {
+                    "code": "confirmation_required",
+                    "message": "Replays are paid API calls: send confirm=true to proceed.",
+                },
+            )
+        try:
+            result = replay.replay_step(
+                store, step_id, body.request, client_factory=replay_client_factory
+            )
+        except ReplayError as exc:
+            raise replay_error(exc) from None
+        return ReplayOut(**asdict(result))
 
     # ------------------------------------------------------------------ SPA
     @app.get("/api", include_in_schema=False)

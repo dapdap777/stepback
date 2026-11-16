@@ -157,7 +157,11 @@ class FakeAPI:
     def __init__(self) -> None:
         self.requests: list[dict[str, Any]] = []
         self.request_headers: list[dict[str, str]] = []
+        self.paths: list[str] = []
         self._queue: list[Any] = []
+        # /v1/messages/count_tokens answers (free endpoint, not taken from the queue).
+        self.count_tokens_result: int | tuple[int, dict[str, Any]] = 1234
+        self.count_requests: list[dict[str, Any]] = []
 
     def push(self, *responses: Any) -> FakeAPI:
         """Queue responses: a message dict, a list of SSE events, or an (status, body) tuple."""
@@ -166,6 +170,14 @@ class FakeAPI:
 
     def handler(self, request: Any) -> Any:
         body = json.loads(request.content or b"{}")
+        path = request.url.path + (f"?{request.url.query.decode()}" if request.url.query else "")
+        if request.url.path.endswith("/count_tokens"):
+            self.count_requests.append(body)
+            result = self.count_tokens_result
+            if isinstance(result, tuple):
+                return httpx2.Response(result[0], json=result[1])
+            return httpx2.Response(200, json={"input_tokens": result})
+        self.paths.append(path)
         self.requests.append(body)
         self.request_headers.append(dict(request.headers))
         if not self._queue:

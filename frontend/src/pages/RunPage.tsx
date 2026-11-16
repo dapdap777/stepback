@@ -1,6 +1,6 @@
 import { ArrowLeft, GitCompareArrows, GitFork, MousePointerClick, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
-import { api, type RunDetail } from "../api/client";
+import { api, type ReplayOut, type RunDetail } from "../api/client";
 import { useAsync } from "../api/hooks";
 import { StepDetailPanel } from "../components/StepDetail";
 import { Timeline, type TimelineHandle, useSpan, useStepPages } from "../components/Timeline";
@@ -8,6 +8,7 @@ import { Badge, Button, Empty, ErrorBanner, Kbd, Spinner, Stat, StatusDot } from
 import { fmtCost, fmtMs, fmtTime, fmtTokens, runDurationMs } from "../lib/format";
 import { useKeys } from "../lib/keys";
 import { linkProps, navigate, paths } from "../lib/router";
+import { toast } from "../lib/toast";
 
 export function RunPage({ runId, step }: { runId: string; step: number | null }) {
   const detail = useAsync(`run:${runId}`, () => api.getRun(runId));
@@ -68,6 +69,19 @@ function RunView({ detail, selected }: { detail: RunDetail; selected: number | n
     d: () => detail.parent && navigate(paths.diff(detail.parent.id, run.id)),
   });
 
+  const onReplayed = (result: ReplayOut) => {
+    if (result.status === "ok") {
+      toast({ tone: "ok", title: "Replay saved as a new fork", body: result.changed.length ? `Edited: ${result.changed.join(", ")}` : "Re-sent unchanged" });
+    } else {
+      toast({ tone: "error", title: "The API returned an error, saved as a failed step in the fork", body: result.error_message ?? undefined }, 12000);
+    }
+    // Land on the replayed step: it comes right after the fork's inherited history.
+    api
+      .getRun(result.run_id)
+      .then((fork) => navigate(paths.run(result.run_id, fork.inherited_steps)))
+      .catch(() => navigate(paths.run(result.run_id)));
+  };
+
   const remove = async () => {
     const forks = run.fork_count;
     const message = forks
@@ -120,8 +134,8 @@ function RunView({ detail, selected }: { detail: RunDetail; selected: number | n
         </div>
         <div className="mt-4 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-6">
           <Stat label="Steps" value={(detail.inherited_steps + detail.own_steps).toLocaleString()} sub={detail.inherited_steps ? `${detail.inherited_steps} inherited` : run.error_count ? <span className="text-error">{run.error_count} failed</span> : "all succeeded"} />
-          <Stat label="Tokens" value={`${fmtTokens(run.input_tokens)} → ${fmtTokens(run.output_tokens)}`} sub="input → output" />
-          <Stat label="Cost" value={fmtCost(run.cost_usd)} tone="ok" sub="estimated" />
+          <Stat label="Tokens" value={`${fmtTokens(run.input_tokens)} → ${fmtTokens(run.output_tokens)}`} sub={detail.parent ? "this fork's own steps" : "input → output"} />
+          <Stat label="Cost" value={fmtCost(run.cost_usd)} tone="ok" sub={detail.parent ? "estimated · this fork only" : "estimated"} />
           <Stat label="Duration" value={fmtMs(runDurationMs(run))} sub={`${fmtMs(run.latency_ms)} in LLM calls`} />
           <Stat label="Started" value={fmtTime(run.created_at)} />
           <Stat label="Models" value={<span className="font-mono text-[13px]">{run.models.join(", ") || "—"}</span>} />
@@ -148,12 +162,31 @@ function RunView({ detail, selected }: { detail: RunDetail; selected: number | n
           ) : total === 0 ? (
             <Empty title="No steps recorded in this run" />
           ) : (
-            <Timeline ref={timeline} total={count} get={get} ensurePage={ensurePage} selected={current} onSelect={select} span={span} runId={run.id} />
+            <Timeline
+              ref={timeline}
+              total={count}
+              get={get}
+              ensurePage={ensurePage}
+              selected={current}
+              onSelect={select}
+              span={span}
+              runId={run.id}
+              footer={detail.parent ? <ForkEnd parentId={detail.parent.id} runId={run.id} /> : null}
+            />
           )}
         </div>
         <div className="w-[46%] max-w-[760px] min-w-[420px] shrink-0">
           {currentStep ? (
-            <StepDetailPanel summary={currentStep} position={current ?? 0} total={count} onPrev={() => move(-1)} onNext={() => move(1)} onClose={() => select(null)} />
+            <StepDetailPanel
+              summary={currentStep}
+              position={current ?? 0}
+              total={count}
+              onPrev={() => move(-1)}
+              onNext={() => move(1)}
+              onClose={() => select(null)}
+              onReplayed={onReplayed}
+              parentRunId={run.parent_run_id}
+            />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 border-l border-line bg-surface text-center text-muted">
               <MousePointerClick className="size-6 text-faint" />
@@ -165,6 +198,20 @@ function RunView({ detail, selected }: { detail: RunDetail; selected: number | n
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ForkEnd({ parentId, runId }: { parentId: string; runId: string }) {
+  return (
+    <div data-testid="fork-end" className="flex items-center gap-2 border-b border-dashed border-replay/40 bg-replay-soft/50 px-4 py-3 text-[12px] text-muted">
+      <GitFork className="size-3.5 shrink-0 text-replay" />
+      <span>
+        <b className="text-replay">End of fork.</b> Replay re-sends one LLM call; your tool code isn't re-run, so the fork stops here.
+      </span>
+      <a {...linkProps(paths.diff(parentId, runId))} className="ml-auto shrink-0 font-medium text-replay hover:underline">
+        Compare with parent →
+      </a>
     </div>
   );
 }

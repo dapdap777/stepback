@@ -45,6 +45,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/replay/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Replay Status
+         * @description Whether replay can authenticate. Reports the credential's source, never its value.
+         */
+        get: operations["getReplayStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs": {
         parameters: {
             query?: never;
@@ -119,6 +139,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/steps/{step_id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replay Step
+         * @description Send one (edited) LLM call and save the result as a new forked run. Costs money.
+         *
+         *     API failures (auth, rate limit, invalid request...) are saved as a failed step in
+         *     the fork and returned with status "error". The source run is never modified.
+         */
+        post: operations["replayStep"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/steps/{step_id}/replay/estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Estimate Replay
+         * @description Validate an edited request and estimate its input tokens and cost.
+         *
+         *     Free: uses the token-counting endpoint (or a local estimate). Nothing is generated.
+         */
+        post: operations["estimateReplay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -169,6 +234,110 @@ export interface components {
             run_count: number;
             /** Version */
             version: string;
+        };
+        /** ReplayBody */
+        ReplayBody: {
+            /**
+             * Confirm
+             * @description Must be true to send. Replays are paid API calls made only on an explicit user action.
+             * @default false
+             */
+            confirm: boolean;
+            /**
+             * Request
+             * @description Complete kwargs for messages.create: model, max_tokens, messages, system, tools and any other parameters.
+             */
+            request: {
+                [key: string]: unknown;
+            };
+        };
+        /** ReplayEstimate */
+        ReplayEstimate: {
+            /**
+             * Changed
+             * @description Top-level request keys that differ from the original.
+             */
+            changed: string[];
+            /**
+             * Exact
+             * @description True when counted by the API's free count_tokens endpoint.
+             */
+            exact: boolean;
+            /** Input Cost Usd */
+            input_cost_usd: number | null;
+            /** Input Tokens */
+            input_tokens: number;
+            /**
+             * Max Output Cost Usd
+             * @description If the response uses all max_tokens.
+             */
+            max_output_cost_usd: number | null;
+            /** Max Tokens */
+            max_tokens: number;
+            /** Max Total Cost Usd */
+            max_total_cost_usd: number | null;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "count_tokens" | "scaled_from_recording" | "heuristic";
+            /** Model */
+            model: string;
+            /** Note */
+            note: string | null;
+            /** Original Cost Usd */
+            original_cost_usd: number | null;
+            /** Original Input Tokens */
+            original_input_tokens: number | null;
+            /** Price Known */
+            price_known: boolean;
+        };
+        /** ReplayOut */
+        ReplayOut: {
+            /** Changed */
+            changed: string[];
+            /** Error */
+            error: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Error Message
+             * @description The API's own error message, if it failed.
+             */
+            error_message: string | null;
+            /**
+             * Run Id
+             * @description The new forked run.
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "error";
+            /** Step Id */
+            step_id: string;
+        };
+        /** ReplayStatus */
+        ReplayStatus: {
+            /**
+             * Credential Source
+             * @description Where credentials come from (e.g. ANTHROPIC_API_KEY). Never the value.
+             */
+            credential_source: string | null;
+            /** Credentials Configured */
+            credentials_configured: boolean;
+            /** Known Models */
+            known_models: string[];
+            /**
+             * Message
+             * @description How to fix a missing SDK or key.
+             */
+            message: string | null;
+            /** Sdk Installed */
+            sdk_installed: boolean;
+            /** Sdk Version */
+            sdk_version: string | null;
         };
         /** RunDetail */
         RunDetail: {
@@ -544,6 +713,26 @@ export interface operations {
             };
         };
     };
+    getReplayStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayStatus"];
+                };
+            };
+        };
+    };
     listRuns: {
         parameters: {
             query?: {
@@ -696,6 +885,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StepDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replayStep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                step_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    estimateReplay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                step_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayEstimate"];
                 };
             };
             /** @description Validation Error */

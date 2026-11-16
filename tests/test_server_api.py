@@ -337,6 +337,9 @@ def test_openapi_schema(api: TestClient) -> None:
         "listSteps",
         "getStep",
         "diffRuns",
+        "getReplayStatus",
+        "estimateReplay",
+        "replayStep",
     }
     components = schema["components"]["schemas"]
     for name in ("RunPage", "RunDetail", "StepPage", "StepSummaryOut", "StepDetail", "RunDiff"):

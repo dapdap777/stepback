@@ -6,6 +6,7 @@ import { Empty, Kbd, cx } from "./components/ui";
 import { useKeys } from "./lib/keys";
 import { linkProps, paths, useRoute } from "./lib/router";
 import { useTheme } from "./lib/theme";
+import { dismiss, useToasts } from "./lib/toast";
 import { DiffPage } from "./pages/DiffPage";
 import { RunPage } from "./pages/RunPage";
 import { RunsPage } from "./pages/RunsPage";
@@ -16,7 +17,7 @@ export function App() {
   const [help, setHelp] = useState(false);
   const health = useAsync("health", () => api.health());
   useKeys({ "?": () => setHelp((h) => !h), t: toggleTheme });
-  useKeys({ Escape: () => setHelp(false) }, help);
+  useKeys({ Escape: () => setHelp(false), "?": () => setHelp(false) }, help, true);
 
   return (
     <div className="flex h-full flex-col">
@@ -61,6 +62,31 @@ export function App() {
         {route.page === "notFound" ? <Empty title="Page not found" /> : null}
       </main>
       {help ? <ShortcutsDialog onClose={() => setHelp(false)} /> : null}
+      <Toasts />
+    </div>
+  );
+}
+
+function Toasts() {
+  const items = useToasts();
+  return (
+    <div className="pointer-events-none fixed right-5 bottom-5 z-50 flex w-[380px] flex-col gap-2">
+      {items.map((t) => (
+        <div
+          key={t.id}
+          role="status"
+          data-testid="toast"
+          className={cx("pointer-events-auto rounded-lg border bg-surface-2 px-3.5 py-2.5 shadow-pop", t.tone === "error" ? "border-error/50" : "border-replay/50")}
+        >
+          <div className="flex items-start gap-2">
+            <div className={cx("text-[13px] font-semibold", t.tone === "error" ? "text-error" : "text-replay")}>{t.title}</div>
+            <button type="button" onClick={() => dismiss(t.id)} className="ml-auto text-faint hover:text-fg" aria-label="Dismiss">
+              ×
+            </button>
+          </div>
+          {t.body ? <div className="mt-0.5 text-[12.5px] break-words text-muted">{t.body}</div> : null}
+        </div>
+      ))}
     </div>
   );
 }
@@ -95,6 +121,7 @@ const SHORTCUTS: [string, string[], string][] = [
   ["Run", ["g", "G"], "First / last step"],
   ["Run", ["Esc"], "Close step"],
   ["Run", ["d"], "Compare fork with its parent"],
+  ["Run", ["r"], "Replay the selected step (edit + re-send)"],
   ["Compare", ["j", "k"], "Next / previous step"],
   ["Compare", ["n"], "Next difference"],
 ];

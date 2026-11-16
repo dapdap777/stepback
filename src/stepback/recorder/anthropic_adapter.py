@@ -196,41 +196,60 @@ class AnthropicAdapter:
 
     # ------------------------------------------------------------------ normalize
     def normalize(self, call: CallHandle) -> NormalizedCall:
-        request = _jsonable_request(call.request)
-        if call.streamed:
-            response = accumulate_stream(call.events) if call.events else None
-        else:
-            response = _jsonable_response(call.response)
-
-        tool_calls: list[dict[str, Any]] = []
-        usage: dict[str, Any] | None = None
-        stop_reason: str | None = None
-        model = request.get("model")
-        if isinstance(response, dict):
-            for block in response.get("content") or []:
-                if isinstance(block, dict) and block.get("type") in _TOOL_CALL_TYPES:
-                    tool_calls.append(
-                        {
-                            "id": block.get("id"),
-                            "name": block.get("name"),
-                            "input": block.get("input"),
-                            "type": block.get("type"),
-                        }
-                    )
-            usage = response.get("usage") if isinstance(response.get("usage"), dict) else None
-            stop_reason = response.get("stop_reason")
-            model = response.get("model") or model
-
-        return NormalizedCall(
-            model=str(model) if model else None,
-            request=request,
-            response=response,
-            tool_calls=tool_calls,
-            tool_results_in_request=extract_tool_results(request.get("messages")),
-            usage=usage,
-            stop_reason=stop_reason,
-            error=normalize_error(call.error),
+        return normalize_call(
+            call.request,
+            response=call.response,
+            events=call.events if call.streamed else None,
+            error=call.error,
         )
+
+
+def normalize_call(
+    request: dict[str, Any],
+    *,
+    response: Any = None,
+    events: list[Any] | None = None,
+    error: BaseException | None = None,
+) -> NormalizedCall:
+    """Normalize one Anthropic call. Shared by the recorder and by replay.
+
+    ``events`` (raw stream events) take precedence over ``response`` when given.
+    """
+    jrequest = _jsonable_request(request)
+    if events is not None:
+        jresponse = accumulate_stream(events) if events else None
+    else:
+        jresponse = _jsonable_response(response)
+
+    tool_calls: list[dict[str, Any]] = []
+    usage: dict[str, Any] | None = None
+    stop_reason: str | None = None
+    model = jrequest.get("model")
+    if isinstance(jresponse, dict):
+        for block in jresponse.get("content") or []:
+            if isinstance(block, dict) and block.get("type") in _TOOL_CALL_TYPES:
+                tool_calls.append(
+                    {
+                        "id": block.get("id"),
+                        "name": block.get("name"),
+                        "input": block.get("input"),
+                        "type": block.get("type"),
+                    }
+                )
+        usage = jresponse.get("usage") if isinstance(jresponse.get("usage"), dict) else None
+        stop_reason = jresponse.get("stop_reason")
+        model = jresponse.get("model") or model
+
+    return NormalizedCall(
+        model=str(model) if model else None,
+        request=jrequest,
+        response=jresponse,
+        tool_calls=tool_calls,
+        tool_results_in_request=extract_tool_results(jrequest.get("messages")),
+        usage=usage,
+        stop_reason=stop_reason,
+        error=normalize_error(error),
+    )
 
 
 def _parse_version(version: str) -> tuple[int, int]:

@@ -12,11 +12,22 @@ export type StepDetail = Schemas["StepDetail"];
 export type RunDiff = Schemas["RunDiff"];
 export type DiffPair = Schemas["DiffPair"];
 export type Health = Schemas["Health"];
+export type ReplayStatus = Schemas["ReplayStatus"];
+export type ReplayEstimate = Schemas["ReplayEstimate"];
+export type ReplayOut = Schemas["ReplayOut"];
+
+/** Server-side validation error for one field of an edited replay request. */
+export interface FieldError {
+  path: string;
+  message: string;
+}
 
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code: string | null = null,
+    readonly fieldErrors: FieldError[] = [],
   ) {
     super(message);
   }
@@ -33,22 +44,38 @@ function url(path: string, query?: Query): string {
   return qs ? `${path}?${qs}` : path;
 }
 
-async function request<T>(method: string, path: string, query?: Query): Promise<T> {
+async function request<T>(method: string, path: string, query?: Query, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = { "X-Stepback-Client": "1", Accept: "application/json" };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
   const response = await fetch(url(path, query), {
     method,
     credentials: "same-origin",
-    // Required by the server for state-changing requests; harmless on reads.
-    headers: { "X-Stepback-Client": "1", Accept: "application/json" },
+    // X-Stepback-Client is required by the server for state-changing requests.
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
-    let detail = response.statusText;
+    let message = response.statusText;
+    let code: string | null = null;
+    let fieldErrors: FieldError[] = [];
     try {
-      const body = (await response.json()) as { detail?: unknown };
-      if (typeof body.detail === "string") detail = body.detail;
+      const payload = (await response.json()) as { detail?: unknown };
+      const detail = payload.detail;
+      if (typeof detail === "string") message = detail;
+      else if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+        const d = detail as { message?: string; code?: string; errors?: FieldError[] };
+        message = d.message ?? message;
+        code = d.code ?? null;
+        fieldErrors = d.errors ?? [];
+      } else if (Array.isArray(detail)) {
+        // FastAPI's own request validation errors
+        fieldErrors = detail.map((e: { loc?: unknown[]; msg?: string }) => ({ path: (e.loc ?? []).join("."), message: e.msg ?? "invalid" }));
+        message = "Invalid request";
+      }
     } catch {
       /* not JSON */
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, message, code, fieldErrors);
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
@@ -66,4 +93,10 @@ export const api = {
   getStep: (stepId: string) => request<StepDetail>("GET", `/api/steps/${encodeURIComponent(stepId)}`),
   diff: (a: string, b: string, offset = 0, limit = 500) =>
     request<RunDiff>("GET", "/api/diff", { a, b, offset, limit }),
+  replayStatus: () => request<ReplayStatus>("GET", "/api/replay/status"),
+  estimateReplay: (stepId: string, req: Record<string, unknown>) =>
+    request<ReplayEstimate>("POST", `/api/steps/${encodeURIComponent(stepId)}/replay/estimate`, undefined, { request: req }),
+  /** Paid: sends one request to the Anthropic API. Only call from an explicit user action. */
+  replay: (stepId: string, req: Record<string, unknown>) =>
+    request<ReplayOut>("POST", `/api/steps/${encodeURIComponent(stepId)}/replay`, undefined, { request: req, confirm: true }),
 };

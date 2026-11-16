@@ -61,9 +61,11 @@ interface TimelineProps {
   onSelect: (index: number) => void;
   span: { start: number; end: number };
   runId: string;
+  /** Rendered after the last row (e.g. the end-of-fork marker). */
+  footer?: React.ReactNode;
 }
 
-export const Timeline = forwardRef<TimelineHandle, TimelineProps>(function Timeline({ total, get, ensurePage, selected, onSelect, span, runId }, ref) {
+export const Timeline = forwardRef<TimelineHandle, TimelineProps>(function Timeline({ total, get, ensurePage, selected, onSelect, span, runId, footer }, ref) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: total,
@@ -109,6 +111,7 @@ export const Timeline = forwardRef<TimelineHandle, TimelineProps>(function Timel
             );
           })}
         </div>
+        {footer}
       </div>
     </div>
   );
