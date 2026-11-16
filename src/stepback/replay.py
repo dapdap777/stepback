@@ -303,11 +303,19 @@ def estimate(
     )
 
 
+TOKEN_COUNTING_BETA = "token-counting-2024-11-01"
+
+
 def _count_tokens(client: Any, req: dict[str, Any]) -> int:
-    resource = client.beta.messages if req.get("betas") else client.messages
-    method = resource.count_tokens
+    request = dict(req)
+    resource = client.beta.messages if request.get("betas") else client.messages
+    method = getattr(resource, "count_tokens", None)
+    if method is None:
+        # SDKs from before token counting left beta (e.g. anthropic 0.40) only have it here.
+        method = client.beta.messages.count_tokens
+        request["betas"] = [*(request.get("betas") or []), TOKEN_COUNTING_BETA]
     accepted = _accepted_params(method)
-    kwargs = {k: v for k, v in req.items() if accepted is None or k in accepted}
+    kwargs = {k: v for k, v in request.items() if accepted is None or k in accepted}
     kwargs.pop("max_tokens", None)
     result = method(**kwargs)
     return int(result.input_tokens)
