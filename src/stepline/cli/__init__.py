@@ -1,4 +1,4 @@
-"""The ``stepback`` command-line interface."""
+"""The ``stepline`` command-line interface."""
 
 from __future__ import annotations
 
@@ -31,8 +31,8 @@ class Ctx:
                     ("No traces yet ", "bold"),
                     (f"({self.db_path})\n", "dim"),
                     "Record some by wrapping your client:\n\n",
-                    ("    import stepback\n", "cyan"),
-                    ("    client = stepback.wrap(Anthropic())\n", "cyan"),
+                    ("    import stepline\n", "cyan"),
+                    ("    client = stepline.wrap(Anthropic())\n", "cyan"),
                 )
             )
             raise SystemExit(1)
@@ -51,7 +51,7 @@ class Ctx:
             if by_name:
                 return by_name
             raise click.ClickException(
-                f"no run id or name matches {run_id!r} (see `stepback ls`)"
+                f"no run id or name matches {run_id!r} (see `stepline ls`)"
             ) from None
         except AmbiguousRunId as exc:
             raise click.ClickException(str(exc)) from None
@@ -64,13 +64,13 @@ pass_ctx = click.make_pass_decorator(Ctx)
 @click.option(
     "--db",
     type=click.Path(dir_okay=False, path_type=Path),
-    envvar="STEPBACK_DB",
-    help="Trace database (default: ./.stepback/traces.db).",
+    envvar="STEPLINE_DB",
+    help="Trace database (default: ./.stepline/traces.db).",
 )
-@click.version_option(__version__, "-V", "--version", prog_name="stepback")
+@click.version_option(__version__, "-V", "--version", prog_name="stepline")
 @click.pass_context
 def cli(ctx: click.Context, db: Path | None) -> None:
-    """Stepback: a time-travel debugger for AI agents."""
+    """Stepline: a time-travel debugger for AI agents."""
     ctx.obj = Ctx(db)
 
 
@@ -148,11 +148,11 @@ def show_command(
     if steps:
         console.print(
             Text.assemble(
-                ("  stepback show ", "dim"),
+                ("  stepline show ", "dim"),
                 (resolved, "dim cyan"),
                 (" --step N", "dim"),
                 ("  for full messages · ", "dim"),
-                ("stepback ui", "dim cyan"),
+                ("stepline ui", "dim cyan"),
                 ("  to browse and replay", "dim"),
             )
         )
@@ -190,7 +190,7 @@ def prices_command(obj: Ctx, model: str | None) -> None:
         price = lookup(model)
         if price is None:
             raise click.ClickException(
-                f"no price for {model!r}; add it to {path} (see `stepback prices`)"
+                f"no price for {model!r}; add it to {path} (see `stepline prices`)"
             )
         console.print(Text.assemble((model, "bold cyan"), f"  {price}"))
         return
@@ -234,7 +234,7 @@ def prices_command(obj: Ctx, model: str | None) -> None:
     "--allow-origin",
     "allow_origins",
     multiple=True,
-    envvar="STEPBACK_ALLOW_ORIGINS",
+    envvar="STEPLINE_ALLOW_ORIGINS",
     help="Extra exact origin allowed to call the API, e.g. a Vite dev server "
     "(http://localhost:5173). Repeatable. No wildcards.",
 )
@@ -284,7 +284,7 @@ def ui_command(
         raise click.ClickException(str(exc)) from None
     console.print(
         Text.assemble(
-            ("Stepback UI ", "bold"),
+            ("Stepline UI ", "bold"),
             (url, "bold cyan underline"),
             (f"  ·  {obj.db_path}", "dim"),
             ("\nReplays use the offline mock API (--mock).", "yellow") if mock else "",
@@ -326,7 +326,7 @@ def _pick_port(host: str, requested: int | None) -> int:
 @cli.command("demo")
 @pass_ctx
 def demo_command(obj: Ctx) -> None:
-    """Record the example agent offline (mock API: no key, no cost), then try `stepback ui`."""
+    """Record the example agent offline (mock API: no key, no cost), then try `stepline ui`."""
     import runpy
 
     from .. import config
@@ -352,9 +352,9 @@ def demo_command(obj: Ctx) -> None:
     obj.console.print(
         Text.assemble(
             ("\nNext: ", "bold"),
-            ("stepback ui", "bold cyan"),
+            ("stepline ui", "bold cyan"),
             (" to open the timeline, or ", "dim"),
-            ("stepback show", "bold cyan"),
+            ("stepline show", "bold cyan"),
             (" for the terminal view.", "dim"),
         )
     )
@@ -370,6 +370,6 @@ def openapi_command() -> None:
 
 def main(argv: list[str] | None = None) -> None:
     try:
-        cli.main(args=argv, prog_name="stepback")
-    except BrokenPipeError:  # e.g. `stepback ls | head`
+        cli.main(args=argv, prog_name="stepline")
+    except BrokenPipeError:  # e.g. `stepline ls | head`
         sys.exit(0)

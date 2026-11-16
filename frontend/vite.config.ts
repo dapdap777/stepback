@@ -6,7 +6,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
-    outDir: "../src/stepback/server/static",
+    outDir: "../src/stepline/server/static",
     emptyOutDir: true,
     // Everything is bundled: no CDN, no external requests at runtime.
     assetsInlineLimit: 0,
@@ -16,7 +16,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    // `stepback ui --no-open` in another terminal. The Host header is forwarded unchanged
+    // `stepline ui --no-open` in another terminal. The Host header is forwarded unchanged
     // (no changeOrigin), so the API sees a same-origin request from localhost:5173.
     proxy: { "/api": { target: "http://127.0.0.1:7777", changeOrigin: false } },
   },

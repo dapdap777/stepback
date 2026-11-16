@@ -2,21 +2,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
-// The tests run against the real `stepback ui` server (FastAPI + the built bundle) on
+// The tests run against the real `stepline ui` server (FastAPI + the built bundle) on
 // databases seeded by e2e/seed.py. Build first: `npm run build`.
 //
 // Two servers:
 // - PORT:        read-only specs. No API key in its environment (exercises the "no key" path).
 // - REPLAY_PORT: replay specs, on its own database (replays create forks). Its SDK talks to
 //                e2e/fake_anthropic.py via ANTHROPIC_BASE_URL: no real API calls, no cost.
-const PORT = Number(process.env.STEPBACK_E2E_PORT ?? 7799);
+const PORT = Number(process.env.STEPLINE_E2E_PORT ?? 7799);
 const REPLAY_PORT = PORT - 2;
 const FAKE_API_PORT = PORT - 1;
-const DB = join(tmpdir(), `stepback-e2e-${PORT}.db`);
-const REPLAY_DB = join(tmpdir(), `stepback-e2e-replay-${REPLAY_PORT}.db`);
+const DB = join(tmpdir(), `stepline-e2e-${PORT}.db`);
+const REPLAY_DB = join(tmpdir(), `stepline-e2e-replay-${REPLAY_PORT}.db`);
 
 const serve = (db: string, port: number) =>
-  `cd .. && uv run python frontend/e2e/seed.py "${db}" && uv run stepback --db "${db}" ui --no-open --port ${port}`;
+  `cd .. && uv run python frontend/e2e/seed.py "${db}" && uv run stepline --db "${db}" ui --no-open --port ${port}`;
 
 
 

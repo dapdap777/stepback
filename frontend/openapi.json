@@ -384,7 +384,7 @@
           },
           "mock": {
             "default": false,
-            "description": "Replays go to the offline mock API (`stepback ui --mock`): nothing is sent.",
+            "description": "Replays go to the offline mock API (`stepline ui --mock`): nothing is sent.",
             "title": "Mock",
             "type": "boolean"
           },
@@ -1480,8 +1480,8 @@
     }
   },
   "info": {
-    "summary": "Local API for the Stepback time-travel debugger.",
-    "title": "Stepback",
+    "summary": "Local API for the Stepline time-travel debugger.",
+    "title": "Stepline",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",

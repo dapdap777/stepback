@@ -1,6 +1,6 @@
 """Scrub secrets from data before it is written to disk.
 
-Stepback only stores request *bodies* (never headers or client configuration), so API keys
+Stepline only stores request *bodies* (never headers or client configuration), so API keys
 should not normally reach it at all. This module is the second line of defense: anything that
 looks like a credential inside messages, tool inputs, tool results or error messages is
 replaced with ``[REDACTED]``.

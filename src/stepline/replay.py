@@ -36,10 +36,10 @@ ClientFactory = Callable[[], Any]
 CREDENTIAL_ENV_VARS = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
 MISSING_CREDENTIALS_MESSAGE = (
     "No Anthropic API key found. Replay sends the edited request with your own key, which is "
-    "read from the environment of the `stepback ui` process when you replay (it's never "
+    "read from the environment of the `stepline ui` process when you replay (it's never "
     "stored). Stop the server, then run:\n\n"
     "    export ANTHROPIC_API_KEY=sk-ant-...\n"
-    "    stepback ui\n\n"
+    "    stepline ui\n\n"
     "(`ant auth login` profiles work too, with SDK versions that support them.)"
 )
 ALLOWED_ROLES = {"user", "assistant", "system"}
@@ -75,7 +75,7 @@ class SdkMissing(ReplayError):
 
     def __init__(self) -> None:
         super().__init__(
-            "Replay needs the Anthropic SDK: pip install 'stepback[anthropic]' (or anthropic)."
+            "Replay needs the Anthropic SDK: pip install 'stepline[anthropic]' (or anthropic)."
         )
 
 

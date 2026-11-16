@@ -231,7 +231,7 @@ class ReplayStatus(BaseModel):
     known_models: list[str]
     mock: bool = Field(
         default=False,
-        description="Replays go to the offline mock API (`stepback ui --mock`): nothing is sent.",
+        description="Replays go to the offline mock API (`stepline ui --mock`): nothing is sent.",
     )
 
 

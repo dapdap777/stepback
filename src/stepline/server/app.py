@@ -1,4 +1,4 @@
-"""FastAPI application behind ``stepback ui``."""
+"""FastAPI application behind ``stepline ui``."""
 
 from __future__ import annotations
 
@@ -79,9 +79,9 @@ def create_app(
 
     app = FastAPI(
         lifespan=lifespan,
-        title="Stepback",
+        title="Stepline",
         version=__version__,
-        summary="Local API for the Stepback time-travel debugger.",
+        summary="Local API for the Stepline time-travel debugger.",
         openapi_url="/api/openapi.json",
         # Swagger UI / ReDoc pages load assets from a CDN; everything here stays local.
         docs_url=None,
@@ -378,20 +378,20 @@ def _totals(steps: list[StepSummary]) -> DiffTotals:
 
 
 _NOT_BUILT_PAGE = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Stepback</title>
+<html lang="en"><head><meta charset="utf-8"><title>Stepline</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head><body>
-<h1>Stepback</h1>
+<h1>Stepline</h1>
 <p>The API is running, but the web UI hasn't been built in this checkout.</p>
 <p>Build it with <code>cd frontend &amp;&amp; npm ci &amp;&amp; npm run build</code>, then reload.
 Released packages from PyPI include the built UI.</p>
-<p>Meanwhile: <code>stepback ls</code> and <code>stepback show</code> work in the terminal,
+<p>Meanwhile: <code>stepline ls</code> and <code>stepline show</code> work in the terminal,
 and the API schema is at <a href="/api/openapi.json">/api/openapi.json</a>.</p>
 </body></html>"""
 
 
 def openapi_schema() -> dict[str, Any]:
-    """The OpenAPI document, without needing a database (used by `stepback openapi`)."""
+    """The OpenAPI document, without needing a database (used by `stepline openapi`)."""
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:

@@ -1,14 +1,13 @@
 [project]
-# Published as "stepback-debugger" ("stepback" is taken on PyPI by an unrelated project);
-# the import name and the CLI command are `stepback`.
-name = "stepback-debugger"
+# Package, import and CLI command all share one name: `stepline`.
+name = "stepline"
 version = "0.1.0"
 description = "Time-travel debugger for AI agents: record every LLM call, inspect it in a local web UI, and replay from any step."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
-authors = [{ name = "Stepback contributors" }]
+authors = [{ name = "Stepline contributors" }]
 keywords = ["llm", "agents", "debugger", "anthropic", "claude", "observability", "tracing"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -33,17 +32,17 @@ dependencies = [
 [project.optional-dependencies]
 # Supported range. The floor and the newest release are both tested in CI
 # (.github/workflows/ci.yml); keep the two in sync with SUPPORTED_ANTHROPIC in
-# src/stepback/recorder/anthropic_adapter.py.
+# src/stepline/recorder/anthropic_adapter.py.
 anthropic = ["anthropic>=0.40,<3"]
 
 [project.scripts]
-stepback = "stepback.cli:main"
+stepline = "stepline.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/dapdap777/stepback"
-Issues = "https://github.com/dapdap777/stepback/issues"
-Changelog = "https://github.com/dapdap777/stepback/blob/main/CHANGELOG.md"
-Security = "https://github.com/dapdap777/stepback/blob/main/SECURITY.md"
+Homepage = "https://github.com/dapdap777/stepline"
+Issues = "https://github.com/dapdap777/stepline/issues"
+Changelog = "https://github.com/dapdap777/stepline/blob/main/CHANGELOG.md"
+Security = "https://github.com/dapdap777/stepline/blob/main/SECURITY.md"
 
 [dependency-groups]
 dev = [
@@ -60,17 +59,17 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/stepback"]
+packages = ["src/stepline"]
 # The built frontend is gitignored but must ship in the wheel.
-artifacts = ["src/stepback/server/static/**"]
+artifacts = ["src/stepline/server/static/**"]
 
 [tool.hatch.build.targets.wheel.force-include]
-# `stepback demo` runs the example agent; ship it inside the package.
-"examples/weather_agent.py" = "stepback/demo/weather_agent.py"
+# `stepline demo` runs the example agent; ship it inside the package.
+"examples/weather_agent.py" = "stepline/demo/weather_agent.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["src/stepback", "tests", "examples", "README.md", "LICENSE", "CHANGELOG.md"]
-artifacts = ["src/stepback/server/static/**"]
+include = ["src/stepline", "tests", "examples", "README.md", "LICENSE", "CHANGELOG.md"]
+artifacts = ["src/stepline/server/static/**"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -94,7 +93,7 @@ ignore = ["SIM105"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
-files = ["src/stepback"]
+files = ["src/stepline"]
 
 [[tool.mypy.overrides]]
 module = ["anthropic.*"]

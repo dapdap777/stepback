@@ -8,7 +8,7 @@ Covers ``Anthropic``/``AsyncAnthropic`` and the platform clients that share thei
 * ``parse`` (structured outputs)
 * ``stream`` (the ``with client.messages.stream(...) as s:`` helper)
 
-The SDK is imported lazily and only for type checks, so Stepback itself doesn't need it.
+The SDK is imported lazily and only for type checks, so Stepline itself doesn't need it.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ ClientT = TypeVar("ClientT")
 #: Tested range of the ``anthropic`` package: [floor, cap). Mirrors pyproject.toml.
 SUPPORTED_ANTHROPIC = ((0, 40), (3, 0))
 
-_WRAPPED_FLAG = "_stepback_wrapped"
+_WRAPPED_FLAG = "_stepline_wrapped"
 # Request kwargs never stored: headers may carry credentials; the rest is transport config.
 _DROP_KWARGS = {"extra_headers", "extra_query", "timeout"}
 _TOOL_CALL_TYPES = {"tool_use", "server_tool_use", "mcp_tool_use"}

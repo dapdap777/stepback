@@ -247,7 +247,7 @@ function CredentialNotice({ status }: { status: ReplayStatus | null }) {
     return (
       <div className="flex items-center gap-2 text-[12px] text-muted" data-testid="replay-credentials">
         <KeyRound className="size-3.5 text-tool" />
-        Offline mode (<code className="font-mono">stepback ui --mock</code>): replays go to the bundled mock API. Nothing is sent or billed.
+        Offline mode (<code className="font-mono">stepline ui --mock</code>): replays go to the bundled mock API. Nothing is sent or billed.
       </div>
     );
   }

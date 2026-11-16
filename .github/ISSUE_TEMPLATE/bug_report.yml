@@ -18,13 +18,13 @@ body:
     id: repro
     attributes:
       label: Minimal reproduction
-      description: The smallest code or commands that show the problem (ideally with `stepback demo` or a mocked client).
+      description: The smallest code or commands that show the problem (ideally with `stepline demo` or a mocked client).
       render: python
   - type: input
     id: versions
     attributes:
       label: Versions
-      description: Output of `stepback --version`, `python --version` and `pip show anthropic | head -2`.
+      description: Output of `stepline --version`, `python --version` and `pip show anthropic | head -2`.
     validations:
       required: true
   - type: dropdown
@@ -38,4 +38,4 @@ body:
     id: logs
     attributes:
       label: Logs / screenshots
-      description: Stepback logs to the `stepback` logger; `logging.getLogger("stepback").setLevel("DEBUG")` shows more.
+      description: Stepline logs to the `stepline` logger; `logging.getLogger("stepline").setLevel("DEBUG")` shows more.

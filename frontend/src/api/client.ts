@@ -1,4 +1,4 @@
-// Typed client for the local Stepback API. Types are generated from the server's OpenAPI
+// Typed client for the local Stepline API. Types are generated from the server's OpenAPI
 // schema (`npm run gen:api`); CI fails if they drift from the backend.
 import type { components } from "./schema";
 
@@ -45,12 +45,12 @@ function url(path: string, query?: Query): string {
 }
 
 async function request<T>(method: string, path: string, query?: Query, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = { "X-Stepback-Client": "1", Accept: "application/json" };
+  const headers: Record<string, string> = { "X-Stepline-Client": "1", Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const response = await fetch(url(path, query), {
     method,
     credentials: "same-origin",
-    // X-Stepback-Client is required by the server for state-changing requests.
+    // X-Stepline-Client is required by the server for state-changing requests.
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });

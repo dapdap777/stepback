@@ -1,12 +1,12 @@
-"""A small tool-using agent, recorded with stepback.
+"""A small tool-using agent, recorded with stepline.
 
     python examples/weather_agent.py --mock   # offline, no API key needed
     python examples/weather_agent.py          # real API (needs ANTHROPIC_API_KEY)
-    stepback ui                               # then inspect the run
+    stepline ui                               # then inspect the run
 
 The agent compares weekend weather in two cities using three toy tools (canned data, so
-results are reproducible). The only stepback-specific code is the import and the
-`stepback.wrap(...)` call in main().
+results are reproducible). The only stepline-specific code is the import and the
+`stepline.wrap(...)` call in main().
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from typing import Any
 
 from anthropic import Anthropic
 
-import stepback
+import stepline
 
 MODEL = "claude-opus-5-5"
 MAX_TURNS = 8
@@ -138,19 +138,19 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.mock:
-        from stepback.demo.mock_api import mock_http_client
+        from stepline.demo.mock_api import mock_http_client
 
         client = Anthropic(api_key="offline-mock", http_client=mock_http_client())
     else:
         client = Anthropic()  # reads ANTHROPIC_API_KEY
 
-    client = stepback.wrap(client)  # ← every call through `client` is now recorded
+    client = stepline.wrap(client)  # ← every call through `client` is now recorded
 
-    with stepback.run("weather-agent (mock)" if args.mock else "weather-agent"):
+    with stepline.run("weather-agent (mock)" if args.mock else "weather-agent"):
         run_agent(client, args.question)
 
-    stepback.flush()
-    print("\nRecorded. Inspect it with:  stepback ui   (or: stepback show)")
+    stepline.flush()
+    print("\nRecorded. Inspect it with:  stepline ui   (or: stepline show)")
     return 0
 
 

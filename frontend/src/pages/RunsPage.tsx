@@ -145,7 +145,7 @@ export function RunsPage() {
             <Empty title="No runs recorded yet">
               <p>Wrap your Anthropic client and run your agent:</p>
               <pre className="mt-2 rounded-lg border border-line bg-surface-2 px-4 py-3 text-left font-mono text-[12.5px] text-fg">
-                {"import stepback\nclient = stepback.wrap(Anthropic())"}
+                {"import stepline\nclient = stepline.wrap(Anthropic())"}
               </pre>
             </Empty>
           )
@@ -163,7 +163,7 @@ export function RunsPage() {
         <span><Kbd>Enter</Kbd> open</span>
         <span><Kbd>x</Kbd> select for compare</span>
         <span className="ml-auto inline-flex items-center gap-1.5">
-          <Terminal className="size-3.5" /> also in your terminal: <code className="font-mono text-muted">stepback ls</code>
+          <Terminal className="size-3.5" /> also in your terminal: <code className="font-mono text-muted">stepline ls</code>
         </span>
       </div>
 

@@ -1,4 +1,4 @@
-"""Terminal rendering for ``stepback ls`` / ``stepback show`` (rich).
+"""Terminal rendering for ``stepline ls`` / ``stepline show`` (rich).
 
 User content is always added through :class:`rich.text.Text` (never markup strings) so that
 brackets in prompts can't be interpreted as rich markup.

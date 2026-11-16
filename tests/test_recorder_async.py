@@ -6,13 +6,13 @@ from typing import Any
 import anthropic
 import pytest
 
-import stepback
+import stepline
 from fakes import MODEL, FakeAPI, error_body, stream_events, text_message, tool_use_message
 
 
 async def test_async_create(fake_api: FakeAPI, recorded: Any) -> None:
     raw = fake_api.async_client()
-    client = stepback.wrap(raw)
+    client = stepline.wrap(raw)
     assert client is raw and isinstance(client, anthropic.AsyncAnthropic)
     fake_api.push(text_message("async hello"))
     response = await client.messages.create(
@@ -25,7 +25,7 @@ async def test_async_create(fake_api: FakeAPI, recorded: Any) -> None:
 
 
 async def test_async_error(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.async_client())
+    client = stepline.wrap(fake_api.async_client())
     fake_api.push((429, error_body("slow down", "rate_limit_error")))
     with pytest.raises(anthropic.RateLimitError):
         await client.messages.create(
@@ -36,7 +36,7 @@ async def test_async_error(fake_api: FakeAPI, recorded: Any) -> None:
 
 
 async def test_async_stream_create(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.async_client())
+    client = stepline.wrap(fake_api.async_client())
     fake_api.push(stream_events(["as", "ync"], tool=("toolu_a", "calc", '{"x": 1}')))
     stream = await client.messages.create(
         model=MODEL, max_tokens=10, messages=[{"role": "user", "content": "hi"}], stream=True
@@ -53,7 +53,7 @@ async def test_async_stream_create(fake_api: FakeAPI, recorded: Any) -> None:
 
 
 async def test_async_stream_helper(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.async_client())
+    client = stepline.wrap(fake_api.async_client())
     fake_api.push(stream_events(["he", "llo"]))
     async with client.messages.stream(
         model=MODEL, max_tokens=10, messages=[{"role": "user", "content": "hi"}]
@@ -67,14 +67,14 @@ async def test_async_stream_helper(fake_api: FakeAPI, recorded: Any) -> None:
 
 
 async def test_async_runs_are_isolated_per_task(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.async_client())
+    client = stepline.wrap(fake_api.async_client())
     fake_api.push(
         tool_use_message("toolu_x", "t", {}),
         tool_use_message("toolu_y", "t", {}),
     )
 
     async def agent(name: str) -> str | None:
-        async with stepback.run(name) as r:
+        async with stepline.run(name) as r:
             await client.messages.create(
                 model=MODEL, max_tokens=10, messages=[{"role": "user", "content": name}]
             )

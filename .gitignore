@@ -8,10 +8,10 @@ build/
 .mypy_cache/
 .ruff_cache/
 .coverage
-.stepback/
+.stepline/
 node_modules/
-src/stepback/server/static/
-!src/stepback/server/static/.gitkeep
+src/stepline/server/static/
+!src/stepline/server/static/.gitkeep
 .DS_Store
 frontend/test-results/
 frontend/playwright-report/

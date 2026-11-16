@@ -51,7 +51,7 @@ class RunContext:
 
 
 _current_run: contextvars.ContextVar[RunContext | None] = contextvars.ContextVar(
-    "stepback_current_run", default=None
+    "stepline_current_run", default=None
 )
 
 
@@ -160,7 +160,7 @@ class Recorder:
                 self._run_states = {}
             if self._thread is None or not self._thread.is_alive():
                 self._thread = threading.Thread(
-                    target=self._writer_loop, name="stepback-writer", daemon=True
+                    target=self._writer_loop, name="stepline-writer", daemon=True
                 )
                 self._thread.start()
 
@@ -342,10 +342,10 @@ class run:
 
     Works as a context manager (sync or async) and as a decorator::
 
-        with stepback.run("triage", metadata={"ticket": 42}):
+        with stepline.run("triage", metadata={"ticket": 42}):
             agent.handle(ticket)
 
-        @stepback.run("nightly-eval")
+        @stepline.run("nightly-eval")
         async def main(): ...
     """
 

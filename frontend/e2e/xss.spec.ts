@@ -16,7 +16,7 @@ test("recorded content is inert: no script runs, nothing loads", async ({ page, 
       await detail.getByRole("tab", { name: tab }).click();
       await page.waitForTimeout(50);
       // Payloads are shown as literal text...
-      await expect(detail).toContainText("window.__stepback_pwned");
+      await expect(detail).toContainText("window.__stepline_pwned");
       // ...and never become live elements.
       expect(await detail.locator("script, iframe, img, object, embed, svg[onload]").count()).toBe(0);
       expect(await detail.locator('a[href^="javascript:" i]').count()).toBe(0);
@@ -29,12 +29,12 @@ test("recorded content is inert: no script runs, nothing loads", async ({ page, 
   await detail.getByRole("tab", { name: "Overview" }).click();
   const markdown = detail.locator(".prose-sb").first();
   await expect(markdown).toContainText("Rendering markdown with payloads");
-  await expect(markdown).toContainText("<script>window.__stepback_pwned = 'script'</script>");
+  await expect(markdown).toContainText("<script>window.__stepline_pwned = 'script'</script>");
   await expect(markdown).toContainText("<svg onload=");
   await expect(markdown).toContainText("[image: tracking pixel]");
   await expect(markdown.locator("a")).toHaveCount(0); // the javascript: link is rendered as text
 
-  expect(await page.evaluate(() => (window as unknown as { __stepback_pwned?: string }).__stepback_pwned)).toBeUndefined();
+  expect(await page.evaluate(() => (window as unknown as { __stepline_pwned?: string }).__stepline_pwned)).toBeUndefined();
   expect(guard.requests.filter((u) => u.includes("tracker.invalid"))).toEqual([]);
 });
 

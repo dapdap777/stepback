@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 export type Theme = "dark" | "light";
-const KEY = "stepback.theme";
+const KEY = "stepline.theme";
 
 function stored(): Theme {
   try {

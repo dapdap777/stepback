@@ -44,4 +44,4 @@ export async function openRun(page: Page, name: string): Promise<void> {
 }
 
 /** The server started with a (fake) API key, for replay specs. See playwright.config.ts. */
-export const REPLAY_BASE_URL = `http://127.0.0.1:${Number(process.env.STEPBACK_E2E_PORT ?? 7799) - 2}`;
+export const REPLAY_BASE_URL = `http://127.0.0.1:${Number(process.env.STEPLINE_E2E_PORT ?? 7799) - 2}`;

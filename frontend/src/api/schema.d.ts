@@ -336,7 +336,7 @@ export interface components {
             message: string | null;
             /**
              * Mock
-             * @description Replays go to the offline mock API (`stepback ui --mock`): nothing is sent.
+             * @description Replays go to the offline mock API (`stepline ui --mock`): nothing is sent.
              * @default false
              */
             mock: boolean;

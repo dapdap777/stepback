@@ -2,8 +2,8 @@ name: Release
 
 # Publishes to PyPI when a maintainer pushes a version tag (e.g. `git push origin v0.1.0`).
 # Uses PyPI trusted publishing (OIDC): there are no API tokens in this repository.
-# One-time setup on PyPI: add a trusted publisher for project "stepback-debugger" with
-# owner "dapdap777", repository "stepback", workflow "release.yml", environment "pypi".
+# One-time setup on PyPI: add a trusted publisher for project "stepline" with
+# owner "dapdap777", repository "stepline", workflow "release.yml", environment "pypi".
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
           python3 - <<'PY'
           import glob, zipfile
           names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
-          for required in ("stepback/server/static/index.html", "stepback/demo/weather_agent.py"):
+          for required in ("stepline/server/static/index.html", "stepline/demo/weather_agent.py"):
               assert required in names, f"{required} missing from wheel"
           print("wheel OK:", len(names), "files")
           PY
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/stepback-debugger/
+      url: https://pypi.org/project/stepline/
     permissions:
       id-token: write  # trusted publishing
     steps:

@@ -1,7 +1,7 @@
-"""An offline stand-in for the Anthropic Messages API, for trying stepback without a key.
+"""An offline stand-in for the Anthropic Messages API, for trying stepline without a key.
 
     from anthropic import Anthropic
-    from stepback.demo.mock_api import mock_http_client
+    from stepline.demo.mock_api import mock_http_client
 
     client = Anthropic(api_key="offline", http_client=mock_http_client())
 
@@ -33,7 +33,7 @@ def _http_module() -> Any:
 
 
 def _delay(seconds: float) -> None:
-    if os.environ.get("STEPBACK_DEMO_FAST") != "1":
+    if os.environ.get("STEPLINE_DEMO_FAST") != "1":
         time.sleep(seconds)
 
 

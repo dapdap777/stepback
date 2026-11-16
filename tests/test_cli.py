@@ -9,11 +9,11 @@ import anthropic
 import pytest
 from click.testing import CliRunner
 
-import stepback
+import stepline
 from fakes import MODEL, FakeAPI, error_body, stream_events, tool_use_message
-from stepback.cli import cli
-from stepback.cli.render import fmt_ago, fmt_cost, fmt_ms, one_line
-from stepback.storage import Run, Step, TraceStore
+from stepline.cli import cli
+from stepline.cli.render import fmt_ago, fmt_cost, fmt_ms, one_line
+from stepline.storage import Run, Step, TraceStore
 
 
 @pytest.fixture
@@ -31,13 +31,13 @@ def invoke(runner: CliRunner, db_path: Path, *args: str, width: int = 120) -> An
 @pytest.fixture
 def agent_run(fake_api: FakeAPI, db_path: Path) -> str:
     """A recorded 3-step tool-using run, plus a second run with an API error."""
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(
         tool_use_message("toolu_1", "get_weather", {"city": "Paris"}),
         stream_events(["It is ", "sunny [bold]in[/] Paris."]),
         (529, error_body("Overloaded", "overloaded_error")),
     )
-    with stepback.run("weather-agent") as r:
+    with stepline.run("weather-agent") as r:
         messages: list[Any] = [{"role": "user", "content": "Weather in Paris?"}]
         first = client.messages.create(model=MODEL, max_tokens=50, messages=messages)
         messages += [
@@ -51,11 +51,11 @@ def agent_run(fake_api: FakeAPI, db_path: Path) -> str:
         ]
         for _ in client.messages.create(model=MODEL, max_tokens=50, messages=messages, stream=True):
             pass
-    with stepback.run("flaky"), pytest.raises(anthropic.APIStatusError):
+    with stepline.run("flaky"), pytest.raises(anthropic.APIStatusError):
         client.messages.create(
             model=MODEL, max_tokens=5, messages=[{"role": "user", "content": "x"}]
         )
-    assert stepback.flush(5)
+    assert stepline.flush(5)
     assert r.id is None  # the scope's id is cleared on exit
     with TraceStore(db_path) as store:
         run_id = store.find_run_by_name("weather-agent")
@@ -186,7 +186,7 @@ def test_missing_database_is_friendly(runner: CliRunner, tmp_path: Path) -> None
     result = runner.invoke(cli, ["--db", str(tmp_path / "none.db"), "ls"])
     assert result.exit_code == 1
     assert "No traces yet" in result.output
-    assert "stepback.wrap" in result.output
+    assert "stepline.wrap" in result.output
     assert not (tmp_path / "none.db").exists()
 
 
@@ -203,7 +203,7 @@ def test_prices_command(runner: CliRunner, db_path: Path) -> None:
 
 
 def test_version(runner: CliRunner) -> None:
-    assert stepback.__version__ in runner.invoke(cli, ["--version"]).output
+    assert stepline.__version__ in runner.invoke(cli, ["--version"]).output
 
 
 @pytest.mark.parametrize(

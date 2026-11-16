@@ -1,4 +1,4 @@
-"""Local web server for the Stepback UI (imported lazily by `stepback ui`)."""
+"""Local web server for the Stepline UI (imported lazily by `stepline ui`)."""
 
 from .app import create_app, openapi_schema
 

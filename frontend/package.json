@@ -1,14 +1,14 @@
 {
-  "name": "stepback-ui",
+  "name": "stepline-ui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Web UI for Stepback, bundled into the Python package.",
+  "description": "Web UI for Stepline, bundled into the Python package.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
-    "gen:api": "cd .. && uv run stepback openapi > frontend/openapi.json && cd frontend && openapi-typescript openapi.json -o src/api/schema.d.ts",
+    "gen:api": "cd .. && uv run stepline openapi > frontend/openapi.json && cd frontend && openapi-typescript openapi.json -o src/api/schema.d.ts",
     "e2e": "playwright test"
   },
   "dependencies": {

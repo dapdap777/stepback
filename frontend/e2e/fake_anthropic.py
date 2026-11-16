@@ -2,7 +2,7 @@
 
     python frontend/e2e/fake_anthropic.py 7798
 
-The `stepback ui` under test is started with ANTHROPIC_BASE_URL pointing here, so replays
+The `stepline ui` under test is started with ANTHROPIC_BASE_URL pointing here, so replays
 go through the real SDK code path without any real API call or cost.
 
 * POST /v1/messages/count_tokens -> {"input_tokens": ~len/4}

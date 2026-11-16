@@ -4,15 +4,15 @@ from typing import Any
 
 import pytest
 
-import stepback
-from stepback.recorder.pricing import (
+import stepline
+from stepline.recorder.pricing import (
     effective_prices,
     estimate_cost,
     load_price_file,
     lookup,
     prices_path,
 )
-from stepback.recorder.redact import REDACTED, add_pattern, redact, redact_text
+from stepline.recorder.redact import REDACTED, add_pattern, redact, redact_text
 
 
 @pytest.mark.parametrize(
@@ -60,7 +60,7 @@ def test_long_context_tier() -> None:
 
 
 def test_pricing_override() -> None:
-    stepback.configure(pricing={"my-finetune": {"input": 1.0, "output": 2.0}})
+    stepline.configure(pricing={"my-finetune": {"input": 1.0, "output": 2.0}})
     assert (
         estimate_cost("my-finetune", {"input_tokens": 1_000_000, "output_tokens": 1_000_000}) == 3.0
     )
@@ -147,7 +147,7 @@ def test_price_file_adds_and_overrides_models(db_path: Any) -> None:
 
 def test_configure_beats_price_file(db_path: Any) -> None:
     _write_prices(db_path, '[models."claude-sonnet-5-5"]\ninput = 1.0\n')
-    stepback.configure(pricing={"claude-sonnet-5-5": {"input": 0.5}})
+    stepline.configure(pricing={"claude-sonnet-5-5": {"input": 0.5}})
     price = lookup("claude-sonnet-5-5")
     assert price is not None and price.input == 0.5 and price.output == 10.0
 
@@ -163,7 +163,7 @@ def test_price_file_reloads_when_changed(db_path: Any) -> None:
 def test_env_var_points_to_price_file(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "elsewhere.toml"
     path.write_text('[models."env-model"]\ninput = 7\noutput = 8\n')
-    monkeypatch.setenv("STEPBACK_PRICES", str(path))
+    monkeypatch.setenv("STEPLINE_PRICES", str(path))
     assert prices_path() == path
     price = lookup("env-model")
     assert price is not None and price.output == 8
@@ -182,11 +182,11 @@ def test_env_var_points_to_price_file(tmp_path: Any, monkeypatch: pytest.MonkeyP
 def test_invalid_price_file_is_ignored_with_warning(
     db_path: Any, text: str, message: str, caplog: Any
 ) -> None:
-    import stepback._util as util
+    import stepline._util as util
 
     util._warned.clear()
     _write_prices(db_path, text)
-    with caplog.at_level("WARNING", logger="stepback"):
+    with caplog.at_level("WARNING", logger="stepline"):
         assert load_price_file() == {}
         price = lookup("claude-opus-5-5")
     assert price is not None and price.input == 4.0  # built-in still used

@@ -142,8 +142,8 @@ def migrate(conn: sqlite3.Connection) -> None:
 def _write_gitignore(directory: Path) -> None:
     """Keep traces (which contain prompts) out of version control by default."""
     marker = directory / ".gitignore"
-    if directory.name == ".stepback" and not marker.exists():
+    if directory.name == ".stepline" and not marker.exists():
         try:
-            marker.write_text("# Created by stepback: traces are local-only.\n*\n")
+            marker.write_text("# Created by stepline: traces are local-only.\n*\n")
         except OSError:
             pass

@@ -11,17 +11,17 @@ import pytest
 from anthropic import Anthropic
 from click.testing import CliRunner
 
-from stepback.cli import cli
-from stepback.demo import example_path
-from stepback.demo.mock_api import SCRIPT, mock_http_client
-from stepback.storage import TraceStore
+from stepline.cli import cli
+from stepline.demo import example_path
+from stepline.demo.mock_api import SCRIPT, mock_http_client
+from stepline.storage import TraceStore
 
 REPO = Path(__file__).resolve().parent.parent
 
 
 @pytest.fixture(autouse=True)
 def fast(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("STEPBACK_DEMO_FAST", "1")
+    monkeypatch.setenv("STEPLINE_DEMO_FAST", "1")
 
 
 def test_mock_api_speaks_the_sdk_wire_format() -> None:
@@ -40,10 +40,10 @@ def test_mock_api_speaks_the_sdk_wire_format() -> None:
     assert final.content[0].text == text
 
 
-def test_stepback_demo_records_the_example_run(db_path: Path) -> None:
+def test_stepline_demo_records_the_example_run(db_path: Path) -> None:
     result = CliRunner().invoke(cli, ["--db", str(db_path), "demo"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
-    assert "Go to Lisbon" in result.output and "stepback ui" in result.output
+    assert "Go to Lisbon" in result.output and "stepline ui" in result.output
     with TraceStore(db_path) as store:
         (summary,) = store.list_runs()
         steps = store.get_steps(summary.run.id)
@@ -59,8 +59,8 @@ def test_stepback_demo_records_the_example_run(db_path: Path) -> None:
 
 
 def test_example_runs_with_one_command(tmp_path: Path) -> None:
-    env = {**os.environ, "STEPBACK_DEMO_FAST": "1"}
-    for var in ("STEPBACK_DB", "STEPBACK_DIR", "ANTHROPIC_API_KEY"):
+    env = {**os.environ, "STEPLINE_DEMO_FAST": "1"}
+    for var in ("STEPLINE_DB", "STEPLINE_DIR", "ANTHROPIC_API_KEY"):
         env.pop(var, None)
     proc = subprocess.run(
         [sys.executable, str(REPO / "examples" / "weather_agent.py"), "--mock"],
@@ -72,20 +72,20 @@ def test_example_runs_with_one_command(tmp_path: Path) -> None:
     )
     assert proc.returncode == 0, proc.stderr
     assert "Recorded." in proc.stdout
-    with TraceStore(tmp_path / ".stepback" / "traces.db") as store:
+    with TraceStore(tmp_path / ".stepline" / "traces.db") as store:
         (summary,) = store.list_runs()
     assert summary.step_count == 4
 
 
 def test_example_is_found(tmp_path: Path) -> None:
     assert example_path().name == "weather_agent.py"
-    assert example_path().read_text().count("client = stepback.wrap(client)") == 1
+    assert example_path().read_text().count("client = stepline.wrap(client)") == 1
 
 
 def test_ui_mock_mode_replays_offline(db_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from stepback.server import create_app
+    from stepline.server import create_app
 
     CliRunner().invoke(cli, ["--db", str(db_path), "demo"], catch_exceptions=False)
     with TestClient(create_app(db_path, replay_mock=True), base_url="http://127.0.0.1:7777") as api:
@@ -98,7 +98,7 @@ def test_ui_mock_mode_replays_offline(db_path: Path) -> None:
         out = api.post(
             f"/api/steps/{last['id']}/replay",
             json={"request": source, "confirm": True},
-            headers={"X-Stepback-Client": "1"},
+            headers={"X-Stepline-Client": "1"},
         ).json()
         assert out["status"] == "ok" and out["changed"] == ["system"]
         replayed = api.get(f"/api/steps/{out['step_id']}").json()

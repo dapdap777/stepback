@@ -1,6 +1,6 @@
 """Provider-neutral recording primitives and the adapter interface.
 
-An adapter teaches Stepback how to hook one SDK (Anthropic today; OpenAI and others later).
+An adapter teaches Stepline how to hook one SDK (Anthropic today; OpenAI and others later).
 It has two jobs:
 
 1. ``install``: patch the client so each LLM call goes through
@@ -28,7 +28,7 @@ ClientT = TypeVar("ClientT")
 
 @dataclass
 class NormalizedCall:
-    """Everything Stepback stores about one LLM call, in plain JSON-able form."""
+    """Everything Stepline stores about one LLM call, in plain JSON-able form."""
 
     model: str | None
     request: dict[str, Any]

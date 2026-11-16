@@ -12,7 +12,7 @@ from typing import Any
 import anthropic
 import pytest
 
-import stepback
+import stepline
 from fakes import (
     FAKE_API_KEY,
     MODEL,
@@ -22,8 +22,8 @@ from fakes import (
     text_message,
     tool_use_message,
 )
-from stepback.recorder import AnthropicAdapter, get_recorder
-from stepback.storage import TraceStore
+from stepline.recorder import AnthropicAdapter, get_recorder
+from stepline.storage import TraceStore
 
 
 def _create(client: anthropic.Anthropic, messages: list[dict[str, Any]], **kw: Any) -> Any:
@@ -32,7 +32,7 @@ def _create(client: anthropic.Anthropic, messages: list[dict[str, Any]], **kw: A
 
 def test_wrap_returns_same_client_and_records_call(fake_api: FakeAPI, recorded: Any) -> None:
     raw = fake_api.sync_client()
-    client = stepback.wrap(raw)
+    client = stepline.wrap(raw)
     assert client is raw
     assert isinstance(client, anthropic.Anthropic)
 
@@ -64,14 +64,14 @@ def test_wrap_returns_same_client_and_records_call(fake_api: FakeAPI, recorded: 
 
 
 def test_wrap_is_idempotent(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(stepback.wrap(fake_api.sync_client()))
+    client = stepline.wrap(stepline.wrap(fake_api.sync_client()))
     fake_api.push(text_message("once"))
     _create(client, [{"role": "user", "content": "x"}])
     assert len(recorded()) == 1
 
 
 def test_request_snapshot_is_isolated_from_later_mutation(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     messages: list[dict[str, Any]] = [{"role": "user", "content": [{"type": "text", "text": "a"}]}]
     fake_api.push(text_message("b"))
     _create(client, messages)
@@ -85,7 +85,7 @@ def test_request_snapshot_is_isolated_from_later_mutation(fake_api: FakeAPI, rec
 
 
 def test_tool_loop_links_tool_results_and_parents(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(
         tool_use_message("toolu_1", "get_weather", {"city": "Paris"}),
         text_message("It is sunny in Paris."),
@@ -127,7 +127,7 @@ def test_tool_loop_links_tool_results_and_parents(fake_api: FakeAPI, recorded: A
 
 
 def test_api_error_is_recorded_and_reraised_unchanged(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push((400, error_body("max_tokens too large")))
     with pytest.raises(anthropic.BadRequestError) as info:
         _create(client, [{"role": "user", "content": "x"}])
@@ -143,9 +143,9 @@ def test_api_error_is_recorded_and_reraised_unchanged(fake_api: FakeAPI, recorde
 def test_streaming_create_passes_chunks_and_records_message(
     fake_api: FakeAPI, recorded: Any
 ) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(
-        stream_events(["Hel", "lo", "!"], tool=("toolu_9", "lookup", '{"q": "stepback"}'))
+        stream_events(["Hel", "lo", "!"], tool=("toolu_9", "lookup", '{"q": "stepline"}'))
     )
     stream = _create(client, [{"role": "user", "content": "hi"}], stream=True)
     assert isinstance(stream, anthropic.Stream)
@@ -157,7 +157,7 @@ def test_streaming_create_passes_chunks_and_records_message(
     assert step.streamed and not step.incomplete
     assert step.response is not None
     assert step.response["content"][0] == {"type": "text", "text": "Hello!"}
-    assert step.response["content"][1]["input"] == {"q": "stepback"}
+    assert step.response["content"][1]["input"] == {"q": "stepline"}
     assert step.tool_calls[0]["name"] == "lookup"
     assert step.stop_reason == "tool_use"
     assert step.input_tokens == 30 and step.output_tokens == 42
@@ -168,13 +168,13 @@ def test_streaming_create_passes_chunks_and_records_message(
 
 def test_streaming_does_not_buffer_chunks(fake_api: FakeAPI, recorded: Any) -> None:
     """Each chunk reaches the caller before the next one is pulled from the network."""
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(stream_events(["a", "b", "c"]))
     stream = _create(client, [{"role": "user", "content": "hi"}], stream=True)
     first = next(iter(stream))
     assert first.type == "message_start"
     # Nothing recorded yet: the stream is still open.
-    assert stepback.flush(5)
+    assert stepline.flush(5)
     with TraceStore(get_recorder().db_path) as s:
         assert sum(r.step_count for r in s.list_runs()) == 0
     for _ in stream:
@@ -183,7 +183,7 @@ def test_streaming_does_not_buffer_chunks(fake_api: FakeAPI, recorded: Any) -> N
 
 
 def test_stream_closed_early_is_recorded_as_incomplete(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(stream_events(["one ", "two ", "three"]))
     with _create(client, [{"role": "user", "content": "hi"}], stream=True) as stream:
         for event in stream:
@@ -197,7 +197,7 @@ def test_stream_closed_early_is_recorded_as_incomplete(fake_api: FakeAPI, record
 
 
 def test_messages_stream_helper(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(stream_events(["Stream", "ing"]))
     with client.messages.stream(
         model=MODEL, max_tokens=100, messages=[{"role": "user", "content": "go"}]
@@ -215,7 +215,7 @@ def test_messages_stream_helper(fake_api: FakeAPI, recorded: Any) -> None:
 
 
 def test_beta_messages_and_with_options_are_recorded(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(text_message("beta"), text_message("copy"))
     client.beta.messages.create(
         model=MODEL, max_tokens=10, messages=[{"role": "user", "content": "b"}]
@@ -230,7 +230,7 @@ def test_beta_messages_and_with_options_are_recorded(fake_api: FakeAPI, recorded
 def test_api_key_never_stored_and_secrets_redacted(
     fake_api: FakeAPI, recorded: Any, db_path: Path
 ) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(text_message("ok"))
     leaked = "sk-ant-api03-LEAKEDINPROMPT00000000000000"
     _create(
@@ -251,22 +251,22 @@ def test_api_key_never_stored_and_secrets_redacted(
 
 
 def test_disabled_records_nothing(fake_api: FakeAPI, recorded: Any) -> None:
-    stepback.configure(enabled=False)
-    client = stepback.wrap(fake_api.sync_client())
+    stepline.configure(enabled=False)
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(text_message("quiet"))
     assert _create(client, [{"role": "user", "content": "x"}]).content[0].text == "quiet"
     assert recorded() == []
 
 
 def test_named_runs_group_steps(fake_api: FakeAPI, recorded: Any, db_path: Path) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(text_message("1"), text_message("2"), text_message("3"))
 
-    with stepback.run("first", metadata={"ticket": 7}) as r1:
+    with stepline.run("first", metadata={"ticket": 7}) as r1:
         _create(client, [{"role": "user", "content": "a"}])
         _create(client, [{"role": "user", "content": "b"}])
 
-    @stepback.run("second")
+    @stepline.run("second")
     def task() -> None:
         _create(client, [{"role": "user", "content": "c"}])
 
@@ -283,9 +283,9 @@ def test_named_runs_group_steps(fake_api: FakeAPI, recorded: Any, db_path: Path)
 
 
 def test_run_marked_error_when_block_raises(fake_api: FakeAPI, db_path: Path) -> None:
-    with pytest.raises(RuntimeError), stepback.run("boom"):
+    with pytest.raises(RuntimeError), stepline.run("boom"):
         raise RuntimeError("agent crashed")
-    stepback.flush()
+    stepline.flush()
     with TraceStore(db_path) as s:
         (summary,) = s.list_runs()
     assert summary.run.status == "error"
@@ -295,7 +295,7 @@ def test_run_marked_error_when_block_raises(fake_api: FakeAPI, db_path: Path) ->
 def test_recorder_failures_never_break_the_app(
     fake_api: FakeAPI, monkeypatch: pytest.MonkeyPatch, recorded: Any
 ) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
 
     def explode(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("recorder bug")
@@ -308,7 +308,7 @@ def test_recorder_failures_never_break_the_app(
 def test_normalize_failure_still_stores_minimal_step(
     fake_api: FakeAPI, monkeypatch: pytest.MonkeyPatch, recorded: Any
 ) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     monkeypatch.setattr(AnthropicAdapter, "normalize", lambda self, call: 1 / 0)
     fake_api.push(stream_events(["x"]))
     assert len(list(_create(client, [{"role": "user", "content": "x"}], stream=True))) > 0
@@ -319,16 +319,16 @@ def test_normalize_failure_still_stores_minimal_step(
 def test_unwritable_database_never_breaks_the_app(fake_api: FakeAPI, tmp_path: Path) -> None:
     blocker = tmp_path / "not-a-dir"
     blocker.write_text("file in the way")
-    stepback.configure(db_path=blocker / "traces.db")
-    client = stepback.wrap(fake_api.sync_client())
+    stepline.configure(db_path=blocker / "traces.db")
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(text_message("fine"))
     assert _create(client, [{"role": "user", "content": "x"}]).content[0].text == "fine"
-    assert stepback.flush(5)
+    assert stepline.flush(5)
 
 
 def test_unsupported_client_is_returned_untouched() -> None:
     sentinel = object()
-    assert stepback.wrap(sentinel) is sentinel
+    assert stepline.wrap(sentinel) is sentinel
 
 
 def test_hot_path_overhead_is_small(fake_api: FakeAPI) -> None:
@@ -342,7 +342,7 @@ def test_hot_path_overhead_is_small(fake_api: FakeAPI) -> None:
         }
         for i in range(200)
     ]
-    from stepback.recorder.anthropic_adapter import snapshot_request
+    from stepline.recorder.anthropic_adapter import snapshot_request
 
     n = 200
     start = time.perf_counter()
@@ -354,7 +354,7 @@ def test_hot_path_overhead_is_small(fake_api: FakeAPI) -> None:
         handle.finish(response=None)
     per_call_ms = (time.perf_counter() - start) * 1000 / n
     assert per_call_ms < 2.0, f"hot path took {per_call_ms:.3f} ms per call"
-    assert stepback.flush(30)
+    assert stepline.flush(30)
 
 
 def test_short_script_is_flushed_at_exit(tmp_path: Path) -> None:
@@ -365,10 +365,10 @@ def test_short_script_is_flushed_at_exit(tmp_path: Path) -> None:
         import sys
         sys.path.insert(0, {str(Path(__file__).parent)!r})
         from fakes import FakeAPI, text_message, MODEL
-        import stepback
-        stepback.configure(db_path={str(db)!r}, run_name="exit-test")
+        import stepline
+        stepline.configure(db_path={str(db)!r}, run_name="exit-test")
         api = FakeAPI().push(*[text_message(str(i)) for i in range(5)])
-        client = stepback.wrap(api.sync_client())
+        client = stepline.wrap(api.sync_client())
         for i in range(5):
             client.messages.create(model=MODEL, max_tokens=5, messages=[{{"role": "user", "content": str(i)}}])
         """
@@ -388,7 +388,7 @@ def test_short_script_is_flushed_at_exit(tmp_path: Path) -> None:
 
 
 def test_stored_request_is_replayable_json(fake_api: FakeAPI, recorded: Any) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(text_message("a"))
     _create(client, [{"role": "user", "content": "x"}], metadata={"user_id": "u1"})
     (step,) = recorded()
@@ -402,7 +402,7 @@ def test_stored_request_is_replayable_json(fake_api: FakeAPI, recorded: Any) -> 
 
 
 def test_accumulate_stream_handles_thinking_and_partial_json() -> None:
-    from stepback.recorder.anthropic_adapter import accumulate_stream
+    from stepline.recorder.anthropic_adapter import accumulate_stream
 
     events = [
         {
@@ -454,7 +454,7 @@ def test_parse_structured_output_is_recorded(fake_api: FakeAPI, recorded: Any) -
     class Answer(pydantic.BaseModel):
         city: str
 
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(text_message('{"city": "Paris"}'))
     parsed = client.messages.parse(
         model=MODEL,

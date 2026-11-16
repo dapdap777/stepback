@@ -1,11 +1,11 @@
-"""Stepback: a time-travel debugger for AI agents.
+"""Stepline: a time-travel debugger for AI agents.
 
 Two lines to start recording::
 
-    import stepback
-    client = stepback.wrap(Anthropic())
+    import stepline
+    client = stepline.wrap(Anthropic())
 
-Then run ``stepback ui`` to inspect every step and replay from any of them.
+Then run ``stepline ui`` to inspect every step and replay from any of them.
 """
 
 from __future__ import annotations

@@ -9,7 +9,7 @@ import time
 from collections.abc import Mapping
 from typing import Any
 
-logger = logging.getLogger("stepback")
+logger = logging.getLogger("stepline")
 logger.addHandler(logging.NullHandler())
 
 _warned: set[str] = set()
@@ -31,7 +31,7 @@ def warn_once(key: str, message: str, exc: BaseException | None = None) -> None:
         return
     _warned.add(key)
     logger.warning(
-        "stepback: %s (recording continues; your app is unaffected)", message, exc_info=exc
+        "stepline: %s (recording continues; your app is unaffected)", message, exc_info=exc
     )
 
 

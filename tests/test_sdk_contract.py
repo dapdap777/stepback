@@ -1,4 +1,4 @@
-"""The SDK internals Stepback relies on.
+"""The SDK internals Stepline relies on.
 
 If one of these fails after an anthropic upgrade, the recorder still won't break user code
 (it degrades to recording without bodies), but the integration needs updating.
@@ -11,9 +11,9 @@ from typing import Any
 import anthropic
 import pytest
 
-import stepback
+import stepline
 from fakes import MODEL, FakeAPI, stream_events
-from stepback.recorder.anthropic_adapter import (
+from stepline.recorder.anthropic_adapter import (
     SUPPORTED_ANTHROPIC,
     _parse_version,
     check_sdk_version,
@@ -69,10 +69,10 @@ def test_out_of_range_version_warns_but_still_wraps(
     import importlib.metadata
 
     monkeypatch.setattr(importlib.metadata, "version", lambda name: "9.0.0")
-    with caplog.at_level("WARNING", logger="stepback"):
+    with caplog.at_level("WARNING", logger="stepline"):
         assert not check_sdk_version()
-    client = stepback.wrap(fake_api.sync_client())
-    assert getattr(client, "_stepback_wrapped", False)
+    client = stepline.wrap(fake_api.sync_client())
+    assert getattr(client, "_stepline_wrapped", False)
 
 
 def test_supported_range_is_declared_consistently() -> None:
@@ -102,7 +102,7 @@ def test_version_is_consistent() -> None:
     import sys
     from pathlib import Path
 
-    import stepback
+    import stepline
 
     if sys.version_info >= (3, 11):
         import tomllib
@@ -111,6 +111,6 @@ def test_version_is_consistent() -> None:
 
     root = Path(__file__).resolve().parent.parent
     project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
-    assert project["name"] == "stepback-debugger"
-    assert project["version"] == stepback.__version__
-    assert f"## [{stepback.__version__}]" in (root / "CHANGELOG.md").read_text()
+    assert project["name"] == "stepline"
+    assert project["version"] == stepline.__version__
+    assert f"## [{stepline.__version__}]" in (root / "CHANGELOG.md").read_text()

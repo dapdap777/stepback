@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from stepback.storage import AmbiguousRunId, Run, RunNotFound, Step, TraceStore
-from stepback.storage.db import SCHEMA_VERSION
+from stepline.storage import AmbiguousRunId, Run, RunNotFound, Step, TraceStore
+from stepline.storage.db import SCHEMA_VERSION
 
 
 def make_step(run_id: str, idx: int, step_id: str, parent: str | None = None, **kw: object) -> Step:
@@ -184,7 +184,7 @@ def test_concurrent_reader_while_writing(db_path: Path) -> None:
 def test_migrates_v1_database_and_backfills_digests(tmp_path: Path) -> None:
     import json as _json
 
-    from stepback.storage.db import _MIGRATIONS
+    from stepline.storage.db import _MIGRATIONS
 
     path = tmp_path / "old.db"
     conn = sqlite3.connect(path)
@@ -232,7 +232,7 @@ def test_page_runs_keyset(store: TraceStore) -> None:
 
 
 def test_delete_parent_with_forks_requires_cascade(store: TraceStore) -> None:
-    from stepback.storage import RunHasForks
+    from stepline.storage import RunHasForks
 
     store.create_run(Run(id="run_p", name="p", created_at=1.0))
     store.insert_step(make_step("run_p", 0, "p0"))

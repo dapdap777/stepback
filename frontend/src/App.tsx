@@ -24,7 +24,7 @@ export function App() {
       <header className="flex h-12 shrink-0 items-center gap-5 border-b border-line bg-surface px-5">
         <a {...linkProps(paths.runs())} className="flex items-center gap-2 font-semibold tracking-tight">
           <Logo />
-          stepback
+          stepline
         </a>
         <nav className="flex items-center gap-1 text-[13px]">
           <NavLink to={paths.runs()} active={route.page === "runs" || route.page === "run"} icon={<List className="size-3.5" />}>

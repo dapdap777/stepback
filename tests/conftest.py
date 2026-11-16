@@ -8,23 +8,23 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-import stepback
+import stepline
 from fakes import FakeAPI
-from stepback import config
-from stepback.recorder.recorder import _reset_recorder_for_tests
-from stepback.storage import Step, TraceStore
+from stepline import config
+from stepline.recorder.recorder import _reset_recorder_for_tests
+from stepline.storage import Step, TraceStore
 
 
 @pytest.fixture(autouse=True)
 def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     """Every test gets its own database, fresh settings and a fresh recorder."""
-    db_path = tmp_path / ".stepback" / "traces.db"
-    monkeypatch.delenv("STEPBACK_DISABLED", raising=False)
-    monkeypatch.delenv("STEPBACK_DIR", raising=False)
-    monkeypatch.delenv("STEPBACK_DB", raising=False)
+    db_path = tmp_path / ".stepline" / "traces.db"
+    monkeypatch.delenv("STEPLINE_DISABLED", raising=False)
+    monkeypatch.delenv("STEPLINE_DIR", raising=False)
+    monkeypatch.delenv("STEPLINE_DB", raising=False)
     _reset_recorder_for_tests()
     config.settings = config.Settings()
-    stepback.configure(db_path=db_path)
+    stepline.configure(db_path=db_path)
     yield db_path
     _reset_recorder_for_tests()
     config.settings = config.Settings()
@@ -52,7 +52,7 @@ def recorded(db_path: Path) -> Callable[[], list[Step]]:
     """Flush the recorder and return every recorded step, oldest run first."""
 
     def read() -> list[Step]:
-        assert stepback.flush(5)
+        assert stepline.flush(5)
         with TraceStore(db_path) as s:
             steps: list[Step] = []
             for summary in reversed(s.list_runs()):

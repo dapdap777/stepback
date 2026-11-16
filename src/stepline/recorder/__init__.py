@@ -33,10 +33,10 @@ def wrap(client: ClientT) -> ClientT:
                 return adapter.install(client, recorder)
         warn_once(
             f"unsupported-{type(client).__name__}",
-            f"stepback.wrap() does not support {type(client).__module__}.{type(client).__name__}",
+            f"stepline.wrap() does not support {type(client).__module__}.{type(client).__name__}",
         )
     except Exception as exc:
-        warn_once("wrap", "stepback.wrap() failed", exc)
+        warn_once("wrap", "stepline.wrap() failed", exc)
     return client
 
 

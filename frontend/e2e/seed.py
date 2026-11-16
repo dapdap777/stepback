@@ -1,6 +1,6 @@
 """Seed a trace database for the Playwright tests and README screenshots.
 
-    uv run python frontend/e2e/seed.py /tmp/stepback-e2e.db
+    uv run python frontend/e2e/seed.py /tmp/stepline-e2e.db
 
 Writes deterministic content (timestamps are relative to "now"):
 
@@ -19,8 +19,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from stepback.recorder.pricing import estimate_cost
-from stepback.storage import Run, Step, TraceStore
+from stepline.recorder.pricing import estimate_cost
+from stepline.storage import Run, Step, TraceStore
 
 MODEL = "claude-opus-5-5"
 SYSTEM = (
@@ -274,12 +274,12 @@ def seed_small_runs(store: TraceStore, now: float) -> None:
 
 
 XSS = [
-    "<script>window.__stepback_pwned = 'script'</script>",
-    '<img src="https://tracker.invalid/pixel.png" onerror="window.__stepback_pwned=\'img\'">',
-    '<iframe src="javascript:window.__stepback_pwned=\'iframe\'"></iframe>',
-    "[click me](javascript:window.__stepback_pwned='link')",
+    "<script>window.__stepline_pwned = 'script'</script>",
+    '<img src="https://tracker.invalid/pixel.png" onerror="window.__stepline_pwned=\'img\'">',
+    '<iframe src="javascript:window.__stepline_pwned=\'iframe\'"></iframe>',
+    "[click me](javascript:window.__stepline_pwned='link')",
     "![tracking pixel](https://tracker.invalid/beacon.gif)",
-    "<svg onload=\"window.__stepback_pwned='svg'\"></svg>",
+    "<svg onload=\"window.__stepline_pwned='svg'\"></svg>",
 ]
 
 
@@ -289,7 +289,7 @@ def seed_xss(store: TraceStore, now: float) -> None:
     b = Builder(store, run, now - 899.9, system="<b>system</b> " + XSS[0])
     b.user("Payloads:\n" + "\n".join(XSS))
     b.call([text("Rendering markdown with payloads:\n\n" + "\n\n".join(XSS)),
-            tool("toolu_x1", "read_file", path="<script>window.__stepback_pwned='tool'</script>")],
+            tool("toolu_x1", "read_file", path="<script>window.__stepline_pwned='tool'</script>")],
            latency=1.0, in_tokens=100, out_tokens=50)
     b.tool_results([("toolu_x1", XSS[1] + " " + XSS[0], False)], gap=0.1)
     b.call([text("Done. " + XSS[3])], latency=0.5, in_tokens=120, out_tokens=10)
@@ -355,4 +355,4 @@ def main(path: str) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else ".stepback/e2e.db")
+    main(sys.argv[1] if len(sys.argv) > 1 else ".stepline/e2e.db")

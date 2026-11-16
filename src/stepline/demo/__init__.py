@@ -1,7 +1,7 @@
-"""The example agent and an offline mock API, so stepback can be tried without a key.
+"""The example agent and an offline mock API, so stepline can be tried without a key.
 
-``stepback demo`` runs ``examples/weather_agent.py --mock``. The wheel ships a copy of that
-file as ``stepback/demo/weather_agent.py``; in a source checkout the repository file is used.
+``stepline demo`` runs ``examples/weather_agent.py --mock``. The wheel ships a copy of that
+file as ``stepline/demo/weather_agent.py``; in a source checkout the repository file is used.
 """
 
 from __future__ import annotations

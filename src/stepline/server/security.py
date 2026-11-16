@@ -11,7 +11,7 @@ API credits, so it is locked down to the local browser tab that opened it:
   middleware and no wildcard: cross-origin browsers never get an ``Access-Control-Allow-*``
   header, so they can neither read responses nor pass a preflight.
 * **State-changing requests** (anything but GET/HEAD) additionally need:
-  - the custom ``X-Stepback-Client`` header. Sending a custom header cross-origin forces a CORS
+  - the custom ``X-Stepline-Client`` header. Sending a custom header cross-origin forces a CORS
     preflight, which this server never approves, so a page on another origin can't send one.
   - ``Sec-Fetch-Site``, when the browser sends it, set to ``same-origin`` (or ``none`` for
     non-browser clients). Other localhost ports count as ``same-site``, which is rejected.
@@ -31,7 +31,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 SAFE_METHODS = frozenset({"GET", "HEAD"})
-CLIENT_HEADER = "x-stepback-client"
+CLIENT_HEADER = "x-stepline-client"
 
 # Strict CSP for the bundled UI. No inline scripts or styles, nothing from other origins,
 # and Trusted Types enforcement: the browser itself rejects any attempt to inject HTML strings

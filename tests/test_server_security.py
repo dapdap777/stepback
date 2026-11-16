@@ -9,13 +9,13 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from stepback.server import create_app
-from stepback.server.security import LocalOnlyMiddleware, split_host
-from stepback.storage import Run, TraceStore
+from stepline.server import create_app
+from stepline.server.security import LocalOnlyMiddleware, split_host
+from stepline.storage import Run, TraceStore
 
 BASE = "http://127.0.0.1:7777"
 OWN_ORIGIN = BASE
-CLIENT = {"X-Stepback-Client": "1"}
+CLIENT = {"X-Stepline-Client": "1"}
 
 
 @pytest.fixture
@@ -125,7 +125,7 @@ def test_preflight_rejected(client: TestClient) -> None:
         headers={
             "origin": "http://evil.example",
             "access-control-request-method": "DELETE",
-            "access-control-request-headers": "x-stepback-client",
+            "access-control-request-headers": "x-stepline-client",
         },
     )
     assert response.status_code == 403
@@ -136,7 +136,7 @@ def test_preflight_rejected(client: TestClient) -> None:
 def test_delete_requires_client_header(client: TestClient, seeded: Path) -> None:
     response = client.delete("/api/runs/run_sec0")
     assert response.status_code == 403
-    assert "x-stepback-client" in response.json()["detail"]
+    assert "x-stepline-client" in response.json()["detail"]
     with TraceStore(seeded) as store:
         assert store.get_run("run_sec0") is not None
 
@@ -229,7 +229,7 @@ def test_security_headers(client: TestClient) -> None:
 
 
 def test_ui_binds_to_loopback_by_default() -> None:
-    from stepback.cli import ui_command
+    from stepline.cli import ui_command
 
     host_option = next(p for p in ui_command.params if p.name == "host")
     assert host_option.default == "127.0.0.1"
@@ -238,7 +238,7 @@ def test_ui_binds_to_loopback_by_default() -> None:
 def test_pick_port_skips_busy_port() -> None:
     import socket
 
-    from stepback.cli import _pick_port
+    from stepline.cli import _pick_port
 
     with socket.socket() as busy:
         busy.bind(("127.0.0.1", 0))
@@ -284,11 +284,11 @@ def test_content_security_policy_is_strict(client: TestClient) -> None:
 
 
 def test_pick_port_ignores_time_wait_sockets() -> None:
-    """Restarting `stepback ui --port N` right after stopping it must work."""
+    """Restarting `stepline ui --port N` right after stopping it must work."""
     import socket
     import threading
 
-    from stepback.cli import _pick_port
+    from stepline.cli import _pick_port
 
     server = socket.socket()
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

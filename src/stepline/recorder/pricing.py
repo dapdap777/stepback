@@ -4,7 +4,7 @@ Prices are USD per million tokens for first-party API usage and are *estimates*:
 batch discounts, regional/partner pricing and promotional credits. Unknown models yield
 ``None`` rather than a guess.
 
-Override or extend the table with ``.stepback/prices.toml`` (or ``$STEPBACK_PRICES``)::
+Override or extend the table with ``.stepline/prices.toml`` (or ``$STEPLINE_PRICES``)::
 
     [models."claude-opus-5-5"]      # override some fields of a built-in model
     input = 3.6
@@ -14,7 +14,7 @@ Override or extend the table with ``.stepback/prices.toml`` (or ``$STEPBACK_PRIC
     output = 6.0
     cache_read = 0.15
 
-or programmatically with ``stepback.configure(pricing={...})``, which takes precedence.
+or programmatically with ``stepline.configure(pricing={...})``, which takes precedence.
 """
 
 from __future__ import annotations
@@ -100,8 +100,8 @@ class PriceFileError(ValueError):
 
 
 def prices_path() -> Path:
-    """``$STEPBACK_PRICES`` if set, else ``prices.toml`` next to the trace database."""
-    env = os.environ.get("STEPBACK_PRICES")
+    """``$STEPLINE_PRICES`` if set, else ``prices.toml`` next to the trace database."""
+    env = os.environ.get("STEPLINE_PRICES")
     if env:
         return Path(env).expanduser()
     return config.resolve_db_path().parent / PRICES_FILE_NAME

@@ -11,26 +11,26 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-import stepback
+import stepline
 from fakes import MODEL, FakeAPI, error_body, text_message, tool_use_message
-from stepback import replay
-from stepback.server import create_app
-from stepback.storage import TraceStore
+from stepline import replay
+from stepline.server import create_app
+from stepline.storage import TraceStore
 
 BASE = "http://127.0.0.1:7777"
-CLIENT = {"X-Stepback-Client": "1"}
+CLIENT = {"X-Stepline-Client": "1"}
 SECRET = "sk-ant-api03-SUPERSECRETREPLAYKEY0123456789"
 
 
 @pytest.fixture
 def recorded_run(fake_api: FakeAPI, db_path: Path) -> dict[str, Any]:
-    """A 2-step tool loop recorded through stepback.wrap()."""
-    client = stepback.wrap(fake_api.sync_client())
+    """A 2-step tool loop recorded through stepline.wrap()."""
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(
         tool_use_message("toolu_1", "get_weather", {"city": "Paris"}),
         text_message("It is sunny in Paris.", input_tokens=40, output_tokens=8),
     )
-    with stepback.run("weather"):
+    with stepline.run("weather"):
         messages: list[Any] = [{"role": "user", "content": "Weather in Paris?"}]
         kwargs: dict[str, Any] = dict(model=MODEL, max_tokens=300, system="Be brief.")
         first = client.messages.create(messages=messages, **kwargs)
@@ -42,7 +42,7 @@ def recorded_run(fake_api: FakeAPI, db_path: Path) -> dict[str, Any]:
             },
         ]
         client.messages.create(messages=messages, **kwargs)
-    assert stepback.flush(5)
+    assert stepline.flush(5)
     with TraceStore(db_path) as store:
         (summary,) = store.list_runs()
         steps = store.get_steps(summary.run.id)
@@ -453,7 +453,7 @@ def test_api_key_is_never_stored_logged_or_returned(
     for text in bodies:
         assert SECRET not in text  # ...but never returned
     assert SECRET not in caplog.text  # ...never logged
-    stepback.flush(5)
+    stepline.flush(5)
     raw = b"".join(p.read_bytes() for p in db_path.parent.glob("traces.db*"))
     assert SECRET.encode() not in raw  # ...never stored
 

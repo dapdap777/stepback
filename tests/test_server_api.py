@@ -10,13 +10,13 @@ import pytest
 from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
-import stepback
+import stepline
 from fakes import MODEL, FakeAPI, text_message, tool_use_message
-from stepback.server import create_app
-from stepback.storage import Run, Step, TraceStore
+from stepline.server import create_app
+from stepline.storage import Run, Step, TraceStore
 
 BASE = "http://127.0.0.1:7777"
-CLIENT = {"X-Stepback-Client": "1"}
+CLIENT = {"X-Stepline-Client": "1"}
 
 
 def make_step(run_id: str, idx: int, step_id: str, parent: str | None, **kw: Any) -> Step:
@@ -97,7 +97,7 @@ def forked(db_path: Path) -> Path:
 # ---------------------------------------------------------------------- runs
 def test_health(api: TestClient, db_path: Path) -> None:
     body = api.get("/api/health").json()
-    assert body["version"] == stepback.__version__
+    assert body["version"] == stepline.__version__
     assert body["db_path"] == str(db_path)
 
 
@@ -188,7 +188,7 @@ def test_fork_step_list_includes_inherited_across_pages(api: TestClient, forked:
 
 
 def test_step_detail_has_full_bodies(api: TestClient, fake_api: FakeAPI, db_path: Path) -> None:
-    client = stepback.wrap(fake_api.sync_client())
+    client = stepline.wrap(fake_api.sync_client())
     fake_api.push(tool_use_message("toolu_1", "lookup", {"q": "x"}), text_message("done"))
     messages: list[Any] = [{"role": "user", "content": "go"}]
     first = client.messages.create(model=MODEL, max_tokens=10, messages=messages)
@@ -200,7 +200,7 @@ def test_step_detail_has_full_bodies(api: TestClient, fake_api: FakeAPI, db_path
         },
     ]
     client.messages.create(model=MODEL, max_tokens=10, messages=messages)
-    assert stepback.flush(5)
+    assert stepline.flush(5)
 
     run_id = api.get("/api/runs").json()["items"][0]["id"]
     s0, s1 = api.get(f"/api/runs/{run_id}/steps").json()["items"]
@@ -350,11 +350,11 @@ def test_openapi_schema(api: TestClient) -> None:
 
 
 def test_openapi_cli_command() -> None:
-    from stepback.cli import cli
+    from stepline.cli import cli
 
     result = CliRunner().invoke(cli, ["openapi"])
     assert result.exit_code == 0
-    assert json.loads(result.output)["info"]["title"] == "Stepback"
+    assert json.loads(result.output)["info"]["title"] == "Stepline"
 
 
 def test_diff_aligns_around_steps_missing_from_the_fork(api: TestClient, db_path: Path) -> None:
