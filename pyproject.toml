@@ -25,10 +25,14 @@ dependencies = [
     "rich>=13.0",
     "fastapi>=0.110",
     "uvicorn>=0.27",
+    "tomli>=1.1; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
-anthropic = ["anthropic>=1.0"]
+# Supported range. The floor and the newest release are both tested in CI
+# (.github/workflows/ci.yml); keep the two in sync with SUPPORTED_ANTHROPIC in
+# src/stepback/recorder/anthropic_adapter.py.
+anthropic = ["anthropic>=0.40,<3"]
 
 [project.scripts]
 stepback = "stepback.cli:main"
@@ -39,7 +43,7 @@ Issues = "https://github.com/dapdap777/stepback/issues"
 
 [dependency-groups]
 dev = [
-    "anthropic>=1.0",
+    "anthropic>=0.40,<3",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.6",
@@ -87,3 +91,7 @@ files = ["src/stepback"]
 [[tool.mypy.overrides]]
 module = ["anthropic.*"]
 follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["tomli"]
+ignore_missing_imports = true

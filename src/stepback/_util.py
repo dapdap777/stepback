@@ -65,7 +65,11 @@ def to_jsonable(value: Any, _depth: int = 0) -> Any:
     model_dump = getattr(value, "model_dump", None)
     if callable(model_dump):
         try:
-            return to_jsonable(model_dump(mode="json", exclude_none=True), _depth + 1)
+            try:
+                dumped = model_dump(mode="json", exclude_none=True, warnings=False)
+            except TypeError:  # older pydantic without the `warnings` flag
+                dumped = model_dump(mode="json", exclude_none=True)
+            return to_jsonable(dumped, _depth + 1)
         except Exception:
             pass
     to_dict = getattr(value, "to_dict", None)

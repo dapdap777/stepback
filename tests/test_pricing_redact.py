@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 import stepback
-from stepback.recorder.pricing import estimate_cost, lookup
+from stepback.recorder.pricing import (
+    effective_prices,
+    estimate_cost,
+    load_price_file,
+    lookup,
+    prices_path,
+)
 from stepback.recorder.redact import REDACTED, add_pattern, redact, redact_text
 
 
@@ -102,3 +110,85 @@ def test_ordinary_text_untouched() -> None:
 def test_custom_pattern() -> None:
     add_pattern(r"INTERNAL-[0-9]{6}")
     assert redact_text("id INTERNAL-123456") == f"id {REDACTED}"
+
+
+# ---------------------------------------------------------------------- prices.toml
+def _write_prices(db_path: Any, text: str) -> Any:
+    path = db_path.parent / "prices.toml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    return path
+
+
+def test_price_file_adds_and_overrides_models(db_path: Any) -> None:
+    _write_prices(
+        db_path,
+        """
+        [models."my-org/finetune"]
+        input = 1.5
+        output = 6.0
+
+        [models."claude-opus-5-5"]
+        input = 3.0
+        """,
+    )
+    custom = lookup("my-org/finetune")
+    assert custom is not None and (custom.input, custom.output) == (1.5, 6.0)
+    # Partial override keeps the other built-in fields...
+    opus = lookup("claude-opus-5-5")
+    assert opus is not None and (opus.input, opus.output, opus.cache_read) == (3.0, 20.0, 0.20)
+    # ...and applies to dated variants of the family.
+    dated = lookup("claude-opus-5-5-20270101")
+    assert dated is not None and dated.input == 3.0
+    sources = effective_prices()
+    assert sources["claude-opus-5-5"][1].endswith("prices.toml")
+    assert sources["claude-haiku-5-5"][1] == "built-in"
+
+
+def test_configure_beats_price_file(db_path: Any) -> None:
+    _write_prices(db_path, '[models."claude-sonnet-5-5"]\ninput = 1.0\n')
+    stepback.configure(pricing={"claude-sonnet-5-5": {"input": 0.5}})
+    price = lookup("claude-sonnet-5-5")
+    assert price is not None and price.input == 0.5 and price.output == 10.0
+
+
+def test_price_file_reloads_when_changed(db_path: Any) -> None:
+    path = _write_prices(db_path, '[models."m-x"]\ninput = 1\noutput = 1\n')
+    assert lookup("m-x") is not None
+    path.write_text('[models."m-x"]\ninput = 2\noutput = 2\n# changed size\n')
+    price = lookup("m-x")
+    assert price is not None and price.input == 2
+
+
+def test_env_var_points_to_price_file(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "elsewhere.toml"
+    path.write_text('[models."env-model"]\ninput = 7\noutput = 8\n')
+    monkeypatch.setenv("STEPBACK_PRICES", str(path))
+    assert prices_path() == path
+    price = lookup("env-model")
+    assert price is not None and price.output == 8
+
+
+@pytest.mark.parametrize(
+    ("text", "message"),
+    [
+        ('[models."new-model"]\ninput = 1\n', "needs output"),
+        ('[models."claude-opus-5-5"]\ninptu = 1\n', "unknown field"),
+        ('[models."claude-opus-5-5"]\ninput = -1\n', "non-negative"),
+        ('[prices."x"]\ninput = 1\n', "unknown top-level"),
+        ("not = [valid toml", ""),
+    ],
+)
+def test_invalid_price_file_is_ignored_with_warning(
+    db_path: Any, text: str, message: str, caplog: Any
+) -> None:
+    import stepback._util as util
+
+    util._warned.clear()
+    _write_prices(db_path, text)
+    with caplog.at_level("WARNING", logger="stepback"):
+        assert load_price_file() == {}
+        price = lookup("claude-opus-5-5")
+    assert price is not None and price.input == 4.0  # built-in still used
+    assert "ignoring invalid price file" in caplog.text
+    assert message in caplog.text

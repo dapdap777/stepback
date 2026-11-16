@@ -6,16 +6,22 @@ without any network access.
 
 from __future__ import annotations
 
+import importlib
 import json
 from collections.abc import Callable
+from types import ModuleType
 from typing import Any
 
-import httpx2
 from anthropic import (
     Anthropic,
     AsyncAnthropic,
     DefaultAsyncHttpxClient,
     DefaultHttpxClient,
+)
+
+# anthropic>=1.0 is built on httpx2; 0.x on httpx. Use whichever the installed SDK uses.
+httpx2: ModuleType = importlib.import_module(
+    DefaultHttpxClient.__mro__[1].__module__.split(".", 1)[0]
 )
 
 FAKE_API_KEY = "sk-ant-api03-FAKEKEYFORTESTS0123456789abcdef"
@@ -158,7 +164,7 @@ class FakeAPI:
         self._queue.extend(responses)
         return self
 
-    def handler(self, request: httpx2.Request) -> httpx2.Response:
+    def handler(self, request: Any) -> Any:
         body = json.loads(request.content or b"{}")
         self.requests.append(body)
         self.request_headers.append(dict(request.headers))
@@ -174,7 +180,14 @@ class FakeAPI:
         if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int):
             status, payload = item
             return httpx2.Response(status, json=payload)
+        model = body.get("model")
+        if isinstance(item, dict) and item.get("type") == "message" and model:
+            item = {**item, "model": model}  # echo the requested model, like the real API
         if isinstance(item, list):
+            if model and item and item[0][0] == "message_start":
+                start = dict(item[0][1])
+                start["message"] = {**start["message"], "model": model}
+                item = [(item[0][0], start), *item[1:]]
             return httpx2.Response(
                 200, content=_sse(item), headers={"content-type": "text/event-stream"}
             )
@@ -189,7 +202,7 @@ class FakeAPI:
         )
 
     def async_client(self, **kwargs: Any) -> AsyncAnthropic:
-        async def handler(request: httpx2.Request) -> httpx2.Response:
+        async def handler(request: Any) -> Any:
             # MockTransport needs the body read before handing it to the sync handler.
             await request.aread()
             return self.handler(request)

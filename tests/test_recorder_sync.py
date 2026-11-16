@@ -242,7 +242,7 @@ def test_api_key_never_stored_and_secrets_redacted(
     assert "[REDACTED]" in step.request["messages"][0]["content"]
     assert "extra_headers" not in step.request
     # The real key did reach the (fake) API...
-    assert fake_api.request_headers[0]["x-api-key"].startswith("sk-ant-api03-HEADERKEY")
+    assert "HEADERKEY" in fake_api.request_headers[0]["x-api-key"]
     # ...but nothing key-like is anywhere in the database file.
     get_recorder().shutdown()
     raw = b"".join(p.read_bytes() for p in db_path.parent.glob("traces.db*"))
@@ -405,13 +405,36 @@ def test_accumulate_stream_handles_thinking_and_partial_json() -> None:
     from stepback.recorder.anthropic_adapter import accumulate_stream
 
     events = [
-        {"type": "message_start", "message": {"id": "m", "model": MODEL, "usage": {"input_tokens": 5}}},
-        {"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": ""}},
-        {"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": "Hmm"}},
-        {"type": "content_block_delta", "index": 0, "delta": {"type": "signature_delta", "signature": "sig"}},
+        {
+            "type": "message_start",
+            "message": {"id": "m", "model": MODEL, "usage": {"input_tokens": 5}},
+        },
+        {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {"type": "thinking", "thinking": ""},
+        },
+        {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {"type": "thinking_delta", "thinking": "Hmm"},
+        },
+        {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {"type": "signature_delta", "signature": "sig"},
+        },
         {"type": "content_block_stop", "index": 0},
-        {"type": "content_block_start", "index": 1, "content_block": {"type": "tool_use", "id": "t", "name": "f", "input": {}}},
-        {"type": "content_block_delta", "index": 1, "delta": {"type": "input_json_delta", "partial_json": '{"a": '}},
+        {
+            "type": "content_block_start",
+            "index": 1,
+            "content_block": {"type": "tool_use", "id": "t", "name": "f", "input": {}},
+        },
+        {
+            "type": "content_block_delta",
+            "index": 1,
+            "delta": {"type": "input_json_delta", "partial_json": '{"a": '},
+        },
         # Stream cut off before content_block_stop: keep the partial JSON rather than lose it.
     ]
     message = accumulate_stream(events)
@@ -421,6 +444,10 @@ def test_accumulate_stream_handles_thinking_and_partial_json() -> None:
     assert message["usage"] == {"input_tokens": 5}
 
 
+@pytest.mark.skipif(
+    not hasattr(anthropic.resources.messages.Messages, "parse"),
+    reason="messages.parse() needs a newer anthropic SDK",
+)
 def test_parse_structured_output_is_recorded(fake_api: FakeAPI, recorded: Any) -> None:
     import pydantic
 

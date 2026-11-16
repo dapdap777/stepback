@@ -27,6 +27,9 @@ if TYPE_CHECKING:
 
 ClientT = TypeVar("ClientT")
 
+#: Tested range of the ``anthropic`` package: [floor, cap). Mirrors pyproject.toml.
+SUPPORTED_ANTHROPIC = ((0, 40), (3, 0))
+
 _WRAPPED_FLAG = "_stepback_wrapped"
 # Request kwargs never stored: headers may carry credentials; the rest is transport config.
 _DROP_KWARGS = {"extra_headers", "extra_query", "timeout"}
@@ -63,6 +66,7 @@ class AnthropicAdapter:
     def install(self, client: ClientT, recorder: Recorder) -> ClientT:
         if getattr(client, _WRAPPED_FLAG, False):
             return client
+        check_sdk_version()
         resources = []
         for path in (("messages",), ("beta", "messages")):
             try:
@@ -227,6 +231,36 @@ class AnthropicAdapter:
             stop_reason=stop_reason,
             error=normalize_error(call.error),
         )
+
+
+def _parse_version(version: str) -> tuple[int, int]:
+    parts = []
+    for piece in version.split(".")[:2]:
+        digits = "".join(ch for ch in piece if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    while len(parts) < 2:
+        parts.append(0)
+    return parts[0], parts[1]
+
+
+def check_sdk_version() -> bool:
+    """Warn (once) if the installed anthropic SDK is outside the tested range."""
+    try:
+        from importlib.metadata import version
+
+        installed = version("anthropic")
+    except Exception:
+        return True
+    floor, cap = SUPPORTED_ANTHROPIC
+    if floor <= _parse_version(installed) < cap:
+        return True
+    warn_once(
+        "sdk-version",
+        f"anthropic {installed} is outside the tested range "
+        f"(>={floor[0]}.{floor[1]},<{cap[0]}.{cap[1]}); some calls may be recorded "
+        "without a response body",
+    )
+    return False
 
 
 # ---------------------------------------------------------------------- hot-path helpers

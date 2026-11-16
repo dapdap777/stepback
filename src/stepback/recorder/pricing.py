@@ -2,15 +2,36 @@
 
 Prices are USD per million tokens for first-party API usage and are *estimates*: they ignore
 batch discounts, regional/partner pricing and promotional credits. Unknown models yield
-``None`` rather than a guess. Override or extend with ``stepback.configure(pricing={...})``.
+``None`` rather than a guess.
+
+Override or extend the table with ``.stepback/prices.toml`` (or ``$STEPBACK_PRICES``)::
+
+    [models."claude-opus-5-5"]      # override some fields of a built-in model
+    input = 3.6
+
+    [models."my-org/finetune-v2"]   # add a model: input and output are required
+    input = 1.5
+    output = 6.0
+    cache_read = 0.15
+
+or programmatically with ``stepback.configure(pricing={...})``, which takes precedence.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+import sys
+from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 
 from .. import config
+from .._util import warn_once
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover
+    import tomli as tomllib
 
 
 @dataclass(frozen=True)
@@ -70,24 +91,118 @@ def _strip_provider_prefix(model: str) -> str:
     return model.removesuffix("-fast")
 
 
-def _from_override(data: dict[str, Any]) -> ModelPrice:
-    return ModelPrice(**data)
+PRICES_FILE_NAME = "prices.toml"
+_PRICE_FIELDS = set(ModelPrice.__dataclass_fields__)
+
+
+class PriceFileError(ValueError):
+    pass
+
+
+def prices_path() -> Path:
+    """``$STEPBACK_PRICES`` if set, else ``prices.toml`` next to the trace database."""
+    env = os.environ.get("STEPBACK_PRICES")
+    if env:
+        return Path(env).expanduser()
+    return config.resolve_db_path().parent / PRICES_FILE_NAME
+
+
+def _merge_entry(base: ModelPrice | None, key: str, data: Any, origin: str) -> ModelPrice:
+    if not isinstance(data, dict):
+        raise PriceFileError(f"{origin}: entry for {key!r} must be a table of prices")
+    unknown = set(data) - _PRICE_FIELDS
+    if unknown:
+        raise PriceFileError(
+            f"{origin}: unknown field(s) {sorted(unknown)} for {key!r}; "
+            f"allowed: {sorted(_PRICE_FIELDS)}"
+        )
+    for field_name, value in data.items():
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
+            raise PriceFileError(
+                f"{origin}: {key}.{field_name} must be a non-negative number, got {value!r}"
+            )
+    if base is None:
+        missing = {"input", "output"} - set(data)
+        if missing:
+            raise PriceFileError(
+                f"{origin}: new model {key!r} needs {' and '.join(sorted(missing))} prices"
+            )
+        return ModelPrice(**data)
+    return replace(base, **data)
+
+
+def parse_price_table(raw: dict[str, Any], origin: str) -> dict[str, dict[str, Any]]:
+    """Validate the ``[models."<id>"]`` tables of a prices.toml document."""
+    unknown = set(raw) - {"models"}
+    if unknown:
+        raise PriceFileError(f"{origin}: unknown top-level key(s) {sorted(unknown)}")
+    models = raw.get("models", {})
+    if not isinstance(models, dict):
+        raise PriceFileError(f"{origin}: [models] must be a table")
+    for key, data in models.items():
+        _merge_entry(ANTHROPIC_PRICES.get(key), key, data, origin)  # validation only
+    return {str(k): dict(v) for k, v in models.items()}
+
+
+_file_cache: tuple[Path, int, int, dict[str, dict[str, Any]]] | None = None
+
+
+def load_price_file(path: Path | None = None) -> dict[str, dict[str, Any]]:
+    """Read prices.toml, cached until the file changes. Invalid files are ignored (warned)."""
+    global _file_cache
+    path = path or prices_path()
+    try:
+        stat = path.stat()
+    except OSError:
+        return {}
+    if _file_cache and _file_cache[:3] == (path, stat.st_mtime_ns, stat.st_size):
+        return _file_cache[3]
+    try:
+        with path.open("rb") as fh:
+            entries = parse_price_table(tomllib.load(fh), str(path))
+    except (OSError, ValueError) as exc:  # TOMLDecodeError is a ValueError
+        warn_once(f"prices-{path}", f"ignoring invalid price file {path}: {exc}")
+        entries = {}
+    _file_cache = (path, stat.st_mtime_ns, stat.st_size, entries)
+    return entries
+
+
+def effective_prices() -> dict[str, tuple[ModelPrice, str]]:
+    """The merged price table: model key -> (price, source).
+
+    Precedence (later wins): built-in table < prices.toml < ``configure(pricing=...)``.
+    Partial entries for a known model only override the fields they set.
+    """
+    table: dict[str, tuple[ModelPrice, str]] = {
+        key: (price, "built-in") for key, price in ANTHROPIC_PRICES.items()
+    }
+    layers = (
+        (load_price_file(), str(prices_path())),
+        (config.settings.pricing, "configure()"),
+    )
+    for entries, source in layers:
+        for key, data in entries.items():
+            base = table.get(key, (None, ""))[0]
+            try:
+                table[key] = (_merge_entry(base, key, data, source), source)
+            except PriceFileError as exc:
+                warn_once(f"price-{source}-{key}", str(exc))
+    return table
 
 
 def lookup(model: str | None) -> ModelPrice | None:
+    """Price for ``model``: exact id first, then the longest matching family prefix."""
     if not model:
         return None
-    overrides = config.settings.pricing
-    if model in overrides:
-        return _from_override(overrides[model])
+    table = effective_prices()
+    if model in table:
+        return table[model][0]
     name = _strip_provider_prefix(model)
-    if name in overrides:
-        return _from_override(overrides[name])
     best: str | None = None
-    for key in ANTHROPIC_PRICES:
+    for key in table:
         if (name == key or name.startswith(key + "-")) and (best is None or len(key) > len(best)):
             best = key
-    return ANTHROPIC_PRICES[best] if best else None
+    return table[best][0] if best else None
 
 
 def estimate_cost(model: str | None, usage: dict[str, Any] | None) -> float | None:

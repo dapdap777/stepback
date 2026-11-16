@@ -136,6 +136,13 @@ class TraceStore:
             raise AmbiguousRunId(prefix, matches)
         return matches[0]
 
+    def find_run_by_name(self, name: str) -> str | None:
+        """Id of the most recent run with exactly this name."""
+        rows = self._query(
+            "SELECT id FROM runs WHERE name = ? ORDER BY created_at DESC LIMIT 1", (name,)
+        )
+        return rows[0]["id"] if rows else None
+
     def list_runs(
         self, limit: int = 50, offset: int = 0, *, include_forks: bool = True
     ) -> list[RunSummary]:

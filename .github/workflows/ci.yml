@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Oldest supported anthropic SDK. Keep in sync with pyproject.toml ([project.optional-dependencies])
+# and SUPPORTED_ANTHROPIC in src/stepback/recorder/anthropic_adapter.py
+# (tests/test_sdk_contract.py checks that all three agree).
+env:
+  ANTHROPIC_OLDEST: "0.40.0"
+
+jobs:
+  lint:
+    name: lint + types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check src tests
+      - run: uv run ruff format --check src tests
+      - run: uv run mypy
+
+  test:
+    name: test (py${{ matrix.python }}, anthropic ${{ matrix.anthropic }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+        anthropic: ["newest"]
+        include:
+          # Async detection and stream hooks depend on SDK internals, so test both
+          # ends of the supported range.
+          - python: "3.10"
+            anthropic: "oldest"
+          - python: "3.13"
+            anthropic: "oldest"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Install anthropic SDK (${{ matrix.anthropic }})
+        run: |
+          if [ "${{ matrix.anthropic }}" = "oldest" ]; then
+            spec="anthropic==${ANTHROPIC_OLDEST}"
+          else
+            spec="anthropic>=${ANTHROPIC_OLDEST},<3"  # newest release in the supported range
+          fi
+          uv pip install --upgrade "$spec"
+          uv run --no-sync python -c "import anthropic; print('anthropic', anthropic.__version__)"
+      - run: uv run --no-sync pytest -q
