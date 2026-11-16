@@ -268,3 +268,43 @@ def test_split_host(value: str, expected: tuple[str, str | None]) -> None:
 def test_malformed_allowed_origin_rejected(seeded: Path, origin: str) -> None:
     with pytest.raises(ValueError, match="invalid origin"):
         create_app(seeded, allowed_origins=[origin])
+
+
+def test_content_security_policy_is_strict(client: TestClient) -> None:
+    csp = client.get("/").headers["content-security-policy"]
+    directives = dict(d.strip().split(" ", 1) for d in csp.split(";"))
+    assert directives["default-src"] == "'none'"
+    assert directives["script-src"] == "'self'"
+    assert directives["style-src"] == "'self'"  # no 'unsafe-inline'
+    assert directives["connect-src"] == "'self'"
+    assert directives["require-trusted-types-for"] == "'script'"
+    assert directives["trusted-types"] == "'none'"
+    assert "unsafe-inline" not in csp and "unsafe-eval" not in csp and "*" not in csp
+    assert "http:" not in csp and "https:" not in csp
+
+
+def test_pick_port_ignores_time_wait_sockets() -> None:
+    """Restarting `stepback ui --port N` right after stopping it must work."""
+    import socket
+    import threading
+
+    from stepback.cli import _pick_port
+
+    server = socket.socket()
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("127.0.0.1", 0))
+    server.listen()
+    port = server.getsockname()[1]
+
+    def accept_and_close() -> None:
+        conn, _ = server.accept()
+        conn.close()  # server closes first -> server side enters TIME_WAIT
+
+    thread = threading.Thread(target=accept_and_close)
+    thread.start()
+    client = socket.create_connection(("127.0.0.1", port))
+    thread.join()
+    client.recv(1)
+    client.close()
+    server.close()
+    assert _pick_port("127.0.0.1", port) == port

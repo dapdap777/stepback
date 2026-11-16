@@ -1,0 +1,192 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* Dark is the default (no class needed, so there's no flash before JS runs). */
+@custom-variant light (&:where(.light, .light *));
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0c11;
+  --surface: #10131a;
+  --surface-2: #161a23;
+  --surface-3: #1d222d;
+  --border: #232937;
+  --border-strong: #303848;
+  --fg: #e7eaf0;
+  --muted: #8d96a8;
+  --faint: #5d6678;
+  --llm: #8b7cff;
+  --llm-soft: rgb(139 124 255 / 0.14);
+  --tool: #f5a524;
+  --tool-soft: rgb(245 165 36 / 0.13);
+  --error: #f25470;
+  --error-soft: rgb(242 84 112 / 0.13);
+  --ok: #34d399;
+  --ok-soft: rgb(52 211 153 / 0.13);
+  --replay: #e879f9;
+  --replay-soft: rgb(232 121 249 / 0.13);
+  --info: #60a5fa;
+  --info-soft: rgb(96 165 250 / 0.13);
+  --selection: rgb(139 124 255 / 0.16);
+  --shadow: 0 8px 30px rgb(0 0 0 / 0.45);
+}
+
+:root.light {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f2f4f7;
+  --surface-3: #e9ecf1;
+  --border: #e2e6ed;
+  --border-strong: #cdd3dd;
+  --fg: #12151c;
+  --muted: #5a6274;
+  --faint: #8a92a3;
+  --llm: #6551f0;
+  --llm-soft: rgb(101 81 240 / 0.1);
+  --tool: #b86e00;
+  --tool-soft: rgb(217 130 0 / 0.12);
+  --error: #d42a4a;
+  --error-soft: rgb(212 42 74 / 0.09);
+  --ok: #04875f;
+  --ok-soft: rgb(4 135 95 / 0.1);
+  --replay: #b521c9;
+  --replay-soft: rgb(181 33 201 / 0.09);
+  --info: #2160e0;
+  --info-soft: rgb(33 96 224 / 0.09);
+  --selection: rgb(101 81 240 / 0.1);
+  --shadow: 0 8px 30px rgb(16 24 40 / 0.12);
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-llm: var(--llm);
+  --color-llm-soft: var(--llm-soft);
+  --color-tool: var(--tool);
+  --color-tool-soft: var(--tool-soft);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-replay: var(--replay);
+  --color-replay-soft: var(--replay-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-selection: var(--selection);
+  --shadow-pop: var(--shadow);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+::selection {
+  background: rgb(139 124 255 / 0.35);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thin, theme-aware scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--llm);
+  outline-offset: 2px;
+}
+
+/* Markdown rendered from recorded (untrusted) content. */
+.prose-sb {
+  overflow-wrap: anywhere;
+}
+.prose-sb > * + * {
+  margin-top: 0.6em;
+}
+.prose-sb h1,
+.prose-sb h2,
+.prose-sb h3,
+.prose-sb h4 {
+  font-weight: 600;
+  margin-top: 0.9em;
+}
+.prose-sb h1 {
+  font-size: 1.2em;
+}
+.prose-sb h2 {
+  font-size: 1.1em;
+}
+.prose-sb ul {
+  list-style: disc;
+  padding-left: 1.3em;
+}
+.prose-sb ol {
+  list-style: decimal;
+  padding-left: 1.3em;
+}
+.prose-sb li + li {
+  margin-top: 0.2em;
+}
+.prose-sb a {
+  color: var(--info);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-sb code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-3);
+  border-radius: 4px;
+  padding: 0.05em 0.3em;
+}
+.prose-sb pre {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7em 0.9em;
+  overflow-x: auto;
+}
+.prose-sb pre code {
+  background: none;
+  padding: 0;
+}
+.prose-sb blockquote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: 0.8em;
+  color: var(--muted);
+}
+.prose-sb table {
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+.prose-sb th,
+.prose-sb td {
+  border: 1px solid var(--border);
+  padding: 0.25em 0.6em;
+}

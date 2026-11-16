@@ -290,8 +290,12 @@ def _pick_port(host: str, requested: int | None) -> int:
     def free(port: int) -> bool:
         family = socket.AF_INET6 if ":" in host else socket.AF_INET
         with socket.socket(family, socket.SOCK_STREAM) as sock:
+            # Same option uvicorn uses, so sockets lingering in TIME_WAIT after a restart
+            # don't make a free port look busy. A port with a live listener still fails.
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 sock.bind((host, port))
+                sock.listen(1)
             except OSError:
                 return False
             return True

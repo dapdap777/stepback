@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -181,14 +182,16 @@ def create_app(
         offset: Annotated[int, Query(ge=0)] = 0,
         limit: Annotated[int, Query(ge=1, le=MAX_STEP_PAGE)] = 100,
     ) -> RunDiff:
-        """Align two runs step by step (by position in their histories) and flag differences."""
+        """Align two runs' histories step by step and flag differences.
+
+        Steps are matched by request content (so a fork's inherited steps and identical
+        re-runs line up even when one side has extra steps, e.g. a failed attempt); the
+        unmatched stretches in between are paired in order.
+        """
         run_a, run_b = run_or_404(a), run_or_404(b)
         steps_a = _all_summaries(store, a)
         steps_b = _all_summaries(store, b)
-        pairs = [
-            _pair(i, _at(steps_a, i), _at(steps_b, i))
-            for i in range(max(len(steps_a), len(steps_b)))
-        ]
+        pairs = [_pair(i, sa, sb) for i, (sa, sb) in enumerate(align_steps(steps_a, steps_b))]
         first = next((p.position for p in pairs if p.status not in ("shared", "same")), None)
         return RunDiff(
             a=run_a,
@@ -233,8 +236,28 @@ def _all_summaries(store: TraceStore, run_id: str) -> list[StepSummary]:
             return items
 
 
-def _at(items: list[StepSummary], i: int) -> StepSummary | None:
-    return items[i] if i < len(items) else None
+def align_steps(
+    a: list[StepSummary], b: list[StepSummary]
+) -> list[tuple[StepSummary | None, StepSummary | None]]:
+    """Pair up two step histories, anchoring on steps with identical requests."""
+
+    # Steps present in both histories (a fork's inherited steps) anchor on identity; others
+    # on request content. Identity first matters when a failed call is retried with the very
+    # same request: the shared retry must not be matched to the failed attempt.
+    shared = {s.id for s in a} & {s.id for s in b}
+
+    def key(step: StepSummary) -> str:
+        if step.id in shared or not step.request_hash:
+            return f"id:{step.id}"
+        return f"rq:{step.request_hash}"
+
+    matcher = SequenceMatcher(None, [key(s) for s in a], [key(s) for s in b], autojunk=False)
+    pairs: list[tuple[StepSummary | None, StepSummary | None]] = []
+    for _tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        left, right = a[i1:i2], b[j1:j2]
+        for k in range(max(len(left), len(right))):
+            pairs.append((left[k] if k < len(left) else None, right[k] if k < len(right) else None))
+    return pairs
 
 
 def _pair(position: int, a: StepSummary | None, b: StepSummary | None) -> DiffPair:
@@ -271,12 +294,7 @@ def _totals(steps: list[StepSummary]) -> DiffTotals:
 _NOT_BUILT_PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Stepback</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body{font:15px/1.5 system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;
-color:#1f2328;background:#fff}
-code{background:#f3f4f6;padding:.1rem .3rem;border-radius:4px}
-@media (prefers-color-scheme:dark){body{color:#e6edf3;background:#0d1117}code{background:#21262d}}
-</style></head><body>
+</head><body>
 <h1>Stepback</h1>
 <p>The API is running, but the web UI hasn't been built in this checkout.</p>
 <p>Build it with <code>cd frontend &amp;&amp; npm ci &amp;&amp; npm run build</code>, then reload.

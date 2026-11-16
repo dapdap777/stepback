@@ -15,7 +15,8 @@ API credits, so it is locked down to the local browser tab that opened it:
     preflight, which this server never approves, so a page on another origin can't send one.
   - ``Sec-Fetch-Site``, when the browser sends it, set to ``same-origin`` (or ``none`` for
     non-browser clients). Other localhost ports count as ``same-site``, which is rejected.
-* Defensive response headers: nosniff, no framing, strict CSP, no referrer, and
+* Defensive response headers: nosniff, no framing, strict CSP (with Trusted Types), no
+  referrer, and
   ``no-store`` on the API.
 """
 
@@ -32,10 +33,25 @@ LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 SAFE_METHODS = frozenset({"GET", "HEAD"})
 CLIENT_HEADER = "x-stepback-client"
 
-CONTENT_SECURITY_POLICY = (
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-    "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; "
-    "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+# Strict CSP for the bundled UI. No inline scripts or styles, nothing from other origins,
+# and Trusted Types enforcement: the browser itself rejects any attempt to inject HTML strings
+# into the DOM (innerHTML & co.), so recorded content can only ever be rendered as text.
+CONTENT_SECURITY_POLICY = "; ".join(
+    [
+        "default-src 'none'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "img-src 'self' data:",
+        "font-src 'self'",
+        "connect-src 'self'",
+        "manifest-src 'self'",
+        "base-uri 'none'",
+        "form-action 'none'",
+        "frame-ancestors 'none'",
+        "object-src 'none'",
+        "require-trusted-types-for 'script'",
+        "trusted-types 'none'",
+    ]
 )
 _SECURITY_HEADERS = [
     (b"x-content-type-options", b"nosniff"),

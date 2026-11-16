@@ -13,3 +13,6 @@ node_modules/
 src/stepback/server/static/
 !src/stepback/server/static/.gitkeep
 .DS_Store
+frontend/test-results/
+frontend/playwright-report/
+frontend/node_modules/.tmp/

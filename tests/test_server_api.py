@@ -299,12 +299,15 @@ def test_delete_refuses_when_forks_exist(api: TestClient, forked: Path) -> None:
 
 
 # ---------------------------------------------------------------------- SPA + schema
-def test_ui_not_built_page(api: TestClient) -> None:
-    page = api.get("/")
-    assert page.status_code == 200
-    assert "npm run build" in page.text
-    assert api.get("/runs/run_x").status_code == 200
-    assert api.get("/api/nope").status_code == 404
+def test_ui_not_built_page(db_path: Path, tmp_path: Path) -> None:
+    app = create_app(db_path, static_dir=tmp_path / "no-build")
+    with TestClient(app, base_url=BASE) as client:
+        page = client.get("/")
+        assert page.status_code == 200
+        assert "npm run build" in page.text
+        assert "<style" not in page.text and "<script" not in page.text  # CSP-clean
+        assert client.get("/runs/run_x").status_code == 200
+        assert client.get("/api/nope").status_code == 404
 
 
 def test_serves_built_spa(db_path: Path, tmp_path: Path) -> None:
@@ -349,3 +352,90 @@ def test_openapi_cli_command() -> None:
     result = CliRunner().invoke(cli, ["openapi"])
     assert result.exit_code == 0
     assert json.loads(result.output)["info"]["title"] == "Stepback"
+
+
+def test_diff_aligns_around_steps_missing_from_the_fork(api: TestClient, db_path: Path) -> None:
+    """A failed attempt is in the parent's history but not the fork's: later steps still align."""
+    with TraceStore(db_path) as store:
+        store.create_run(Run(id="run_par", name="par", created_at=1.0))
+        store.insert_step(make_step("run_par", 0, "p0", None))
+        store.insert_step(make_step("run_par", 1, "p1", "p0"))
+        # p2 failed (no response); failed calls never become parents.
+        store.insert_step(
+            make_step(
+                "run_par",
+                2,
+                "p2",
+                "p1",
+                response=None,
+                error={"type": "OverloadedError"},
+                request={"model": MODEL, "messages": [{"role": "user", "content": "q2"}]},
+            )
+        )
+        store.insert_step(
+            make_step(
+                "run_par",
+                3,
+                "p3",
+                "p1",
+                # A retry sends exactly the same request as the failed attempt.
+                request={"model": MODEL, "messages": [{"role": "user", "content": "q2"}]},
+            )
+        )
+        store.insert_step(make_step("run_par", 4, "p4", "p3"))
+        store.create_run(
+            Run(
+                id="run_kid",
+                name="kid",
+                created_at=2.0,
+                parent_run_id="run_par",
+                forked_from_step_id="p4",
+            )
+        )
+        store.insert_step(
+            make_step(
+                "run_kid",
+                4,
+                "k4",
+                "p3",
+                is_replay=True,
+                request={"model": MODEL, "messages": [{"role": "user", "content": "edited"}]},
+            )
+        )
+    diff = api.get("/api/diff", params={"a": "run_par", "b": "run_kid"}).json()
+    rows = [(p["a"] and p["a"]["id"], p["b"] and p["b"]["id"], p["status"]) for p in diff["pairs"]]
+    assert rows == [
+        ("p0", "p0", "shared"),
+        ("p1", "p1", "shared"),
+        ("p2", None, "removed"),
+        ("p3", "p3", "shared"),
+        ("p4", "k4", "changed"),
+    ]
+    assert diff["first_divergence"] == 2
+
+
+def test_diff_of_independent_reruns_matches_identical_requests(
+    api: TestClient, db_path: Path
+) -> None:
+    with TraceStore(db_path) as store:
+        for run_id, answers in (
+            ("run_r1", ["a0", "a1", "a2"]),
+            ("run_r2", ["a0", "DIFFERENT", "a2"]),
+        ):
+            store.create_run(Run(id=run_id, name=run_id, created_at=1.0))
+            parent = None
+            for i, answer in enumerate(answers):
+                sid = f"{run_id}_{i}"
+                store.insert_step(
+                    make_step(
+                        run_id,
+                        i,
+                        sid,
+                        parent,
+                        response={"content": [{"type": "text", "text": answer}]},
+                    )
+                )
+                parent = sid
+    diff = api.get("/api/diff", params={"a": "run_r1", "b": "run_r2"}).json()
+    assert [p["status"] for p in diff["pairs"]] == ["same", "changed", "same"]
+    assert diff["pairs"][1]["response_changed"] and not diff["pairs"][1]["request_changed"]

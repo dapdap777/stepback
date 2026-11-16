@@ -94,7 +94,7 @@ def output_preview(
         if calls:
             return clip("→ " + ", ".join(calls))
     if error:
-        return clip(f"{error.get('type', 'error')}: {error_message(error)}")
+        return clip(error_message(error))
     return None
 
 

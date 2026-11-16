@@ -185,7 +185,7 @@ DiffStatus = Literal["shared", "same", "changed", "added", "removed"]
 
 
 class DiffPair(BaseModel):
-    position: int
+    position: int = Field(description="Row number in the alignment (not a step index).")
     status: DiffStatus = Field(
         description="shared: the same recorded step (inherited by a fork); same: identical "
         "request and response; changed: request or response differs; added/removed: only "
@@ -215,5 +215,5 @@ class RunDiff(BaseModel):
     offset: int
     limit: int
     first_divergence: int | None = Field(
-        description="Position of the first pair that isn't shared/same (None if identical)."
+        description="Position (row) of the first pair that isn't shared/same; None if identical."
     )
