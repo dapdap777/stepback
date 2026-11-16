@@ -18,6 +18,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
+from ..storage.digest import error_message
 from ..storage.models import Run, RunSummary, Step
 
 STATUS_STYLE = {"ok": "green", "error": "red", "running": "yellow"}
@@ -115,16 +116,6 @@ def block_text(content: Any) -> str:
                 parts.append(block)
         return " ".join(p for p in parts if p)
     return "" if content is None else str(content)
-
-
-def error_message(error: dict[str, Any]) -> str:
-    """Prefer the API's own error type/message over the SDK's exception string."""
-    body = error.get("body")
-    if isinstance(body, dict) and isinstance(body.get("error"), dict):
-        inner = body["error"]
-        if inner.get("message"):
-            return f"{inner.get('type', 'error')}: {inner['message']}"
-    return str(error.get("message", ""))
 
 
 def new_user_input(step: Step) -> str | None:

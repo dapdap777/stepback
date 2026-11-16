@@ -3,11 +3,56 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+from .._util import loads
+from . import digest
 
-_MIGRATIONS: dict[int, str] = {
+SCHEMA_VERSION = 2
+
+Migration = str | Callable[[sqlite3.Connection], None]
+
+
+def _v2_step_digests(conn: sqlite3.Connection) -> None:
+    """Add preview/hash columns used by paginated step lists, and backfill them."""
+    for column, ctype in (
+        ("input_preview", "TEXT"),
+        ("output_preview", "TEXT"),
+        ("request_hash", "TEXT"),
+        ("response_hash", "TEXT"),
+        ("message_count", "INTEGER NOT NULL DEFAULT 0"),
+    ):
+        conn.execute(f"ALTER TABLE steps ADD COLUMN {column} {ctype}")
+    last_rowid = 0
+    while True:
+        rows = conn.execute(
+            "SELECT rowid, request, response, error FROM steps WHERE rowid > ?"
+            " ORDER BY rowid LIMIT 500",
+            (last_rowid,),
+        ).fetchall()
+        if not rows:
+            break
+        for row in rows:
+            request = loads(row["request"], {}) or {}
+            response = loads(row["response"])
+            error = loads(row["error"])
+            conn.execute(
+                "UPDATE steps SET input_preview = ?, output_preview = ?, request_hash = ?,"
+                " response_hash = ?, message_count = ? WHERE rowid = ?",
+                (
+                    digest.input_preview(request),
+                    digest.output_preview(response, error),
+                    digest.hash_json(request),
+                    digest.hash_json(response),
+                    digest.message_count(request),
+                    row["rowid"],
+                ),
+            )
+        last_rowid = rows[-1]["rowid"]
+
+
+_MIGRATIONS: dict[int, Migration] = {
     1: """
     CREATE TABLE IF NOT EXISTS runs (
         id                  TEXT PRIMARY KEY,
@@ -53,6 +98,7 @@ _MIGRATIONS: dict[int, str] = {
     CREATE INDEX IF NOT EXISTS idx_steps_run ON steps(run_id, idx);
     CREATE INDEX IF NOT EXISTS idx_steps_parent ON steps(parent_step_id);
     """,
+    2: _v2_step_digests,
 }
 
 
@@ -79,9 +125,13 @@ def migrate(conn: sqlite3.Connection) -> None:
         # Re-read inside the write lock: another process may have migrated meanwhile.
         current = conn.execute("PRAGMA user_version").fetchone()[0]
         for version in range(current + 1, SCHEMA_VERSION + 1):
-            for statement in _MIGRATIONS[version].split(";"):
-                if statement.strip():
-                    conn.execute(statement)
+            migration = _MIGRATIONS[version]
+            if isinstance(migration, str):
+                for statement in migration.split(";"):
+                    if statement.strip():
+                        conn.execute(statement)
+            else:
+                migration(conn)
             conn.execute(f"PRAGMA user_version = {version}")
         conn.execute("COMMIT")
     except BaseException:

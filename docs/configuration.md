@@ -93,6 +93,38 @@ Notes:
 - `stepback prices` prints the effective table and where each entry came from.
   `stepback prices -m <model-id>` shows the price that applies to one model.
 
+## Web UI server
+
+```bash
+stepback ui                     # http://127.0.0.1:7777 (or the next free port), opens a browser tab
+stepback ui --port 8000 --no-open
+stepback openapi > openapi.json # the API schema (used to generate the frontend's types)
+```
+
+The server can read every prompt you've recorded, and with replay it can spend API credits.
+So it is locked to the browser tab that opened it:
+
+- **Loopback only.** It binds to `127.0.0.1` by default. `--host` can bind somewhere else,
+  but prints a warning, because that exposes your traces to anyone who can reach that address.
+- **Host header check.** Only `127.0.0.1`, `localhost`, `::1` and the host you bound to are
+  accepted. This defeats DNS-rebinding attacks, where another site points its own hostname
+  at your machine.
+- **Same-origin only, no CORS.** A request that carries an `Origin` header must come from the
+  UI's own origin. The server never sends `Access-Control-Allow-*` headers, so pages on other
+  sites (or other local ports) can't read its responses.
+- **State-changing endpoints** (delete, and replay later on) use POST or DELETE only. They also
+  require an `X-Stepback-Client: 1` header, which a cross-origin page can't send without a CORS
+  preflight that is never approved. If the browser sends `Sec-Fetch-Site`, it must be
+  `same-origin`. A script on the same machine can still call these endpoints with
+  `curl -X DELETE -H "X-Stepback-Client: 1" ...`.
+- Responses set `nosniff`, `X-Frame-Options: DENY`, a strict Content-Security-Policy, and
+  `Cache-Control: no-store` on the API. The interactive Swagger/ReDoc pages are turned off
+  because they load scripts from a CDN. The schema is still served at `/api/openapi.json`.
+
+When working on the frontend with Vite's dev server, allow its exact origin:
+`stepback ui --allow-origin http://localhost:5173` (or `STEPBACK_ALLOW_ORIGINS`).
+Wildcards are rejected.
+
 ## Supported SDKs
 
 | SDK | Versions | Clients |

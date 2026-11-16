@@ -179,3 +179,86 @@ def test_concurrent_reader_while_writing(db_path: Path) -> None:
     finally:
         writer.close()
         reader.close()
+
+
+def test_migrates_v1_database_and_backfills_digests(tmp_path: Path) -> None:
+    import json as _json
+
+    from stepback.storage.db import _MIGRATIONS
+
+    path = tmp_path / "old.db"
+    conn = sqlite3.connect(path)
+    v1 = _MIGRATIONS[1]
+    assert isinstance(v1, str)
+    conn.executescript(v1)
+    conn.execute("PRAGMA user_version = 1")
+    conn.execute("INSERT INTO runs (id, name, created_at) VALUES ('run_old', 'old', 1.0)")
+    request = {"model": "m", "messages": [{"role": "user", "content": "hello from v1"}]}
+    response = {"content": [{"type": "text", "text": "hi back"}]}
+    conn.execute(
+        "INSERT INTO steps (id, run_id, idx, provider, request, response, started_at)"
+        " VALUES ('s_old', 'run_old', 0, 'anthropic', ?, ?, 1.0)",
+        (_json.dumps(request), _json.dumps(response)),
+    )
+    conn.commit()
+    conn.close()
+
+    with TraceStore(path) as store:
+        step = store.get_step("s_old")
+        assert step is not None
+        assert step.input_preview == "hello from v1"
+        assert step.output_preview == "hi back"
+        assert step.request_hash and step.message_count == 1
+        (summary,), _ = store.list_step_summaries("run_old")
+        assert summary.input_preview == "hello from v1"
+    conn = sqlite3.connect(path)
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+    conn.close()
+
+
+def test_page_runs_keyset(store: TraceStore) -> None:
+    for i in range(5):
+        store.create_run(Run(id=f"run_k{i}", name=f"k{i}", created_at=float(i)))
+    first, cursor = store.page_runs(limit=2)
+    assert [s.run.id for s in first] == ["run_k4", "run_k3"] and cursor
+    # A run recorded between page loads doesn't shift the next page.
+    store.create_run(Run(id="run_new", name="new", created_at=99.0))
+    second, cursor2 = store.page_runs(limit=2, cursor=cursor)
+    assert [s.run.id for s in second] == ["run_k2", "run_k1"]
+    third, cursor3 = store.page_runs(limit=2, cursor=cursor2)
+    assert [s.run.id for s in third] == ["run_k0"] and cursor3 is None
+    with pytest.raises(ValueError):
+        store.page_runs(cursor="garbage!")
+
+
+def test_delete_parent_with_forks_requires_cascade(store: TraceStore) -> None:
+    from stepback.storage import RunHasForks
+
+    store.create_run(Run(id="run_p", name="p", created_at=1.0))
+    store.insert_step(make_step("run_p", 0, "p0"))
+    store.create_run(
+        Run(id="run_c", name="c", created_at=2.0, parent_run_id="run_p", forked_from_step_id="p0")
+    )
+    store.insert_step(make_step("run_c", 0, "c0", is_replay=True))
+    with pytest.raises(RunHasForks) as info:
+        store.delete_run("run_p")
+    assert info.value.fork_ids == ["run_c"]
+    assert store.delete_run("run_p", cascade_forks=True)
+    assert store.get_run("run_c") is None and store.get_step("c0") is None
+
+
+def test_fork_without_own_steps_inherits_history(store: TraceStore) -> None:
+    store.create_run(Run(id="run_h", name="h", created_at=1.0))
+    for i, parent in enumerate([None, "h0", "h1"]):
+        store.insert_step(make_step("run_h", i, f"h{i}", parent=parent))
+    store.create_run(
+        Run(
+            id="run_empty",
+            name="e",
+            created_at=2.0,
+            parent_run_id="run_h",
+            forked_from_step_id="h2",
+        )
+    )
+    assert [s.id for s in store.get_lineage("run_empty")] == ["h0", "h1"]
+    assert store.count_lineage("run_empty") == (2, 0)

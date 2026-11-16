@@ -218,3 +218,18 @@ def test_formatters() -> None:
     assert fmt_ago(0, now=7200) == "2h ago"
     assert one_line("a\n  b   c", 100) == "a b c"
     assert one_line("abcdefghij", 5) == "abcd…"
+
+
+def test_rm_parent_with_forks_needs_cascade(
+    runner: CliRunner, db_path: Path, agent_run: str
+) -> None:
+    with TraceStore(db_path) as store:
+        store.create_run(
+            Run(id="run_child", name="child", created_at=time.time(), parent_run_id=agent_run)
+        )
+    refused = runner.invoke(cli, ["--db", str(db_path), "rm", agent_run, "-y"])
+    assert refused.exit_code != 0 and "--cascade" in refused.output
+    ok = invoke(runner, db_path, "rm", agent_run, "-y", "--cascade")
+    assert "Deleted 1 run" in ok.output
+    with TraceStore(db_path) as store:
+        assert store.get_run("run_child") is None

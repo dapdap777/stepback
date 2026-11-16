@@ -50,6 +50,12 @@ class Step:
     error: dict[str, Any] | None = None
     is_replay: bool = False
     replay_overrides: dict[str, Any] | None = None
+    # Derived at write time (see storage.digest) so lists never parse request bodies.
+    input_preview: str | None = None
+    output_preview: str | None = None
+    request_hash: str | None = None
+    response_hash: str | None = None
+    message_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -94,3 +100,43 @@ class RunSummary:
             fork_count=self.fork_count,
         )
         return data
+
+
+@dataclass
+class StepSummary:
+    """A step without its (potentially huge) request/response bodies."""
+
+    id: str
+    run_id: str
+    idx: int
+    provider: str
+    started_at: float
+    parent_step_id: str | None = None
+    kind: str = "llm"
+    operation: str | None = None
+    model: str | None = None
+    stop_reason: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cache_read_tokens: int | None = None
+    cache_write_tokens: int | None = None
+    cost_usd: float | None = None
+    latency_ms: float | None = None
+    ttft_ms: float | None = None
+    streamed: bool = False
+    incomplete: bool = False
+    is_replay: bool = False
+    error_type: str | None = None
+    error_status: int | None = None
+    input_preview: str | None = None
+    output_preview: str | None = None
+    request_hash: str | None = None
+    response_hash: str | None = None
+    message_count: int = 0
+    # [{id, name, input_preview, has_result, is_error}]
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    # True when the step belongs to an ancestor run (forked runs show inherited history).
+    inherited: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

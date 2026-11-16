@@ -15,7 +15,7 @@ from rich.text import Text
 
 from .. import __version__
 from ..config import resolve_db_path
-from ..storage import AmbiguousRunId, RunNotFound, TraceStore
+from ..storage import AmbiguousRunId, RunHasForks, RunNotFound, TraceStore
 from . import render
 
 
@@ -161,15 +161,19 @@ def show_command(
 @cli.command("rm")
 @click.argument("run_ids", nargs=-1, required=True)
 @click.option("-y", "--yes", is_flag=True, help="Don't ask for confirmation.")
+@click.option("--cascade", is_flag=True, help="Also delete runs forked from these runs.")
 @pass_ctx
-def rm_command(obj: Ctx, run_ids: tuple[str, ...], yes: bool) -> None:
+def rm_command(obj: Ctx, run_ids: tuple[str, ...], yes: bool, cascade: bool) -> None:
     """Delete runs (and their steps)."""
     with obj.open_store() as store:
         resolved = [obj.resolve(store, r) for r in run_ids]
         if not yes:
             click.confirm(f"Delete {len(resolved)} run(s): {', '.join(resolved)}?", abort=True)
         for run_id in resolved:
-            store.delete_run(run_id)
+            try:
+                store.delete_run(run_id, cascade_forks=cascade)
+            except RunHasForks as exc:
+                raise click.ClickException(f"{exc}. Use --cascade to delete them too.") from None
     obj.console.print(f"Deleted {len(resolved)} run(s).", style="green")
 
 
@@ -213,6 +217,101 @@ def prices_command(obj: Ctx, model: str | None) -> None:
             (f" ({state}) · cache writes cost 1.25x input (5m) or 2x (1h)", "dim"),
         )
     )
+
+
+@cli.command("ui")
+@click.option("--host", default="127.0.0.1", show_default=True, help="Interface to bind.")
+@click.option(
+    "-p", "--port", type=int, default=None, help="Port (default: 7777, or the next free one)."
+)
+@click.option("--open/--no-open", "open_browser", default=True, help="Open a browser tab.")
+@click.option(
+    "--allow-origin",
+    "allow_origins",
+    multiple=True,
+    envvar="STEPBACK_ALLOW_ORIGINS",
+    help="Extra exact origin allowed to call the API, e.g. a Vite dev server "
+    "(http://localhost:5173). Repeatable. No wildcards.",
+)
+@pass_ctx
+def ui_command(
+    obj: Ctx, host: str, port: int | None, open_browser: bool, allow_origins: tuple[str, ...]
+) -> None:
+    """Start the local web UI (http://127.0.0.1:7777)."""
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from ..server import create_app
+    from ..server.security import LOOPBACK_HOSTS, is_loopback
+
+    console = obj.console
+    origins = [o for value in allow_origins for o in value.replace(",", " ").split()]
+    if any("*" in o for o in origins):
+        raise click.ClickException("--allow-origin takes exact origins; wildcards are not allowed")
+    allowed_hosts = set(LOOPBACK_HOSTS)
+    if not is_loopback(host):
+        console.print(
+            Text.assemble(
+                ("Warning: ", "bold red"),
+                f"binding to {host} exposes your recorded prompts and responses (and replay, "
+                "which spends API credits) to anyone who can reach this address.",
+            )
+        )
+        allowed_hosts.add(host)
+    chosen = _pick_port(host, port)
+    url_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    if ":" in url_host:
+        url_host = f"[{url_host}]"
+    url = f"http://{url_host}:{chosen}"
+
+    try:
+        app = create_app(obj.db_path, allowed_hosts=allowed_hosts, allowed_origins=origins)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from None
+    console.print(
+        Text.assemble(
+            ("Stepback UI ", "bold"),
+            (url, "bold cyan underline"),
+            (f"  ·  {obj.db_path}", "dim"),
+            ("\nPress Ctrl+C to stop.", "dim"),
+        )
+    )
+    if open_browser:
+        threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+    uvicorn.run(app, host=host, port=chosen, log_level="warning", server_header=False)
+
+
+def _pick_port(host: str, requested: int | None) -> int:
+    """The requested port (must be free), else 7777 or the next free port after it."""
+    import socket
+
+    def free(port: int) -> bool:
+        family = socket.AF_INET6 if ":" in host else socket.AF_INET
+        with socket.socket(family, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind((host, port))
+            except OSError:
+                return False
+            return True
+
+    if requested is not None:
+        if requested and not free(requested):
+            raise click.ClickException(f"port {requested} is already in use")
+        return requested
+    for port in range(7777, 7797):
+        if free(port):
+            return port
+    raise click.ClickException("no free port between 7777 and 7796; pass --port")
+
+
+@cli.command("openapi")
+def openapi_command() -> None:
+    """Print the API's OpenAPI schema (used to generate the frontend's types)."""
+    from ..server import openapi_schema
+
+    click.echo(json.dumps(openapi_schema(), indent=2, sort_keys=True))
 
 
 def main(argv: list[str] | None = None) -> None:
