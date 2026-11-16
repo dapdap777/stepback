@@ -92,7 +92,7 @@ def test_supported_range_is_declared_consistently() -> None:
     match = re.fullmatch(r"anthropic>=(\d+)\.(\d+),<(\d+)", spec)
     assert match, spec
     floor_major, floor_minor, cap_major = (int(g) for g in match.groups())
-    assert SUPPORTED_ANTHROPIC == ((floor_major, floor_minor), (cap_major, 0))
+    assert ((floor_major, floor_minor), (cap_major, 0)) == SUPPORTED_ANTHROPIC
 
     ci = (root / ".github" / "workflows" / "ci.yml").read_text()
     assert f'ANTHROPIC_OLDEST: "{floor_major}.{floor_minor}.0"' in ci
