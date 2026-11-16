@@ -116,9 +116,9 @@ inspect loop on your own machine.
 
 ### Similar tools for recording and replaying agent runs
 
-Several open-source projects and one hosted service also record agent runs and let you replay
-or fork them. The table summarizes what each project's own README (for Retrace, its
-documentation) says it does. It isn't an independent evaluation, and it may be out of date.
+Several open-source projects also record agent runs and let you replay or fork them. The table
+summarizes what each project's own README says it does. It isn't an independent evaluation, and
+it may be out of date.
 
 | Project | How it records | What replay means there | Main focus |
 |---|---|---|---|
@@ -127,15 +127,13 @@ documentation) says it does. It isn't an independent evaluation, and it may be o
 | [Stepfork](https://github.com/utsab345/stepfork) | Instrumented tool calls (`@trace_tool`) and LLM requests; adapters for OpenAI chat completions (non-streaming) and LangGraph | Frozen replay of your entrypoint; hybrid replay re-runs selected LLM calls; fork-at-step with output overrides | Turning a failed run into a pytest regression test, with behavioral diffs and failure minimization |
 | AgentRewind ([JWang-Langer](https://github.com/JWang-Langer/agentrewind)) | Request fingerprints for OpenAI-compatible upstreams; side effects go through an idempotent channel | Deterministic replay; `arw rewind` re-runs live from step N with changed settings | A CLI that pinpoints the first diverging step and explains the request-level differences; no visual dashboard |
 | AgentRewind ([Akshatkasera](https://github.com/Akshatkasera/codex-community-hackathon-del-AgentRewind), a hackathon project) | Imports runs from common agent frameworks | Patch a broken step and replay the downstream branch | A FastAPI + React app that diagnoses failed multi-agent runs and turns fixes into regression tests |
-| [Retrace](https://retraceai.tech) (hosted) | Python and TypeScript SDKs capture LLM calls, tool calls and errors | Replay and fork recorded runs | A hosted service with a web dashboard, REST API, CLI and MCP server |
 
 What Stepline does differently, and what it doesn't do:
 
 - **Recording is an in-process wrapper:** `stepline.wrap(client)` around the Anthropic Python
   SDK. There's no proxy or certificate to install and no decorators on your tools. Streaming,
   async and tool-result linking work automatically. The flip side is that only that SDK is
-  supported. Rewind's proxy covers more providers and any language, and Retrace offers Python
-  and TypeScript SDKs.
+  supported. Rewind's proxy covers more providers and any language.
 - **Replay is a live, edited re-send of one call,** not a deterministic re-execution of your
   program. You change the prompt, messages, tools, parameters or model, see the estimated cost,
   and get a new branch you can diff against the original. Stepline doesn't capture or re-run
@@ -146,8 +144,11 @@ What Stepline does differently, and what it doesn't do:
   with a timeline of every step (tokens, cost, latency) and a step-by-step diff view. There's
   no pytest export, cassette replay in CI, divergence-cause inference or mutation testing. If you
   need those, the tools above are built for them.
-- **It's local and needs no account,** like most of the open-source tools above. Retrace is a
-  hosted service.
+- **It's local and needs no account,** like most of the open-source tools above.
+
+### Other tools in this space
+
+- [Retrace](https://retraceai.tech)
 
 ## How it works
 
